@@ -1,0 +1,5 @@
+name: Nexus
+version: '1.0-SNAPSHOT'
+author: 7Str1kes
+main: com.strikes.nexus.Nexus
+api-version: '1.21'
