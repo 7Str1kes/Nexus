@@ -1,7 +1,9 @@
-package com.strikes.nexus.api;
+package org.glstudio.nexus.api;
 
-import com.strikes.nexus.api.utils.*;
+import org.glstudio.nexus.modules.command.CommandManager;
+import org.glstudio.nexus.utils.*;
 import lombok.Getter;
+import org.bukkit.plugin.java.JavaPlugin;
 
 @Getter
 public class NexusAPI {
@@ -10,12 +12,10 @@ public class NexusAPI {
 
     // Public utils
     private Tasks tasks;
-    private ItemBuilder itemBuilder;
     private DurationParser durationParser;
     private FormatUtils formatUtils;
     private LocationUtils locationUtils;
     private LoggerUtils loggerUtils;
-    private TimeUtils timeUtils;
 
     private NexusAPI() {
         this.initUtils();
@@ -27,7 +27,10 @@ public class NexusAPI {
         this.formatUtils = new FormatUtils();
         this.locationUtils = new LocationUtils();
         this.loggerUtils = new LoggerUtils();
-        this.timeUtils = new TimeUtils();
+    }
+
+    public CommandManager createCommandManager(JavaPlugin plugin) {
+        return new CommandManager(plugin);
     }
 
     public static NexusAPI get() {

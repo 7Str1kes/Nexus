@@ -1,6 +1,6 @@
-package com.strikes.nexus;
+package org.glstudio.nexus;
 
-import com.strikes.nexus.api.utils.LoggerUtils;
+import org.glstudio.nexus.utils.LoggerUtils;
 import lombok.Getter;
 import org.bukkit.plugin.java.JavaPlugin;
 

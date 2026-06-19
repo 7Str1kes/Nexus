@@ -1,4 +1,4 @@
-package com.strikes.nexus.api.utils;
+package org.glstudio.nexus.utils;
 
 import java.time.Duration;
 import java.util.regex.Matcher;

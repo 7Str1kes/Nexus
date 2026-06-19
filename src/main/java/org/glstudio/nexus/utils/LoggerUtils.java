@@ -1,4 +1,4 @@
-package com.strikes.nexus.api.utils;
+package org.glstudio.nexus.utils;
 
 import lombok.Setter;
 import org.bukkit.Bukkit;

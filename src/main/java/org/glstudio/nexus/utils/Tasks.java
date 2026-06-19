@@ -1,6 +1,6 @@
-package com.strikes.nexus.api.utils;
+package org.glstudio.nexus.utils;
 
-import com.strikes.nexus.Nexus;
+import org.glstudio.nexus.Nexus;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitTask;

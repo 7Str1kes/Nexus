@@ -1,4 +1,4 @@
-package com.strikes.nexus.api.utils;
+package org.glstudio.nexus.utils;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
