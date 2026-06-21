@@ -5,20 +5,18 @@ import lombok.Getter;
 import org.bukkit.plugin.java.JavaPlugin;
 
 @Getter
-public final class Nexus extends JavaPlugin {
+public final class Nexus {
 
     @Getter
-    private static Nexus instance;
+    private static JavaPlugin instance;
 
-    @Override
-    public void onEnable() {
-        instance = this;
-
-        LoggerUtils.sendEnable(this);
+    public static void init(JavaPlugin plugin) {
+        instance = plugin;
+        LoggerUtils.sendEnable(plugin);
     }
 
-    @Override
-    public void onDisable() {
-        LoggerUtils.sendDisable(this);
+    public static void shutdown(JavaPlugin plugin) {
+        LoggerUtils.sendDisable(plugin);
+        instance = null;
     }
 }

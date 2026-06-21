@@ -54,10 +54,12 @@ plugins/
 server/
 run/
 
-# Gradle wrapper (keep the wrapper but ignore the actual jar)
-!gradle-wrapper.jar
-/gradle/wrapper/gradle-wrapper.jar
-!/gradle/wrapper/gradle-wrapper.jar
+# Markdown files (except README.md)
+*.md
+!README.md
+
+# Gradle directory
+/gradle/
 
 # Build outputs
 *.jar

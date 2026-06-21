@@ -1,5 +1,0 @@
-name: Nexus
-version: '1.0-SNAPSHOT'
-author: 7Str1kes
-main: org.glstudio.nexus.Nexus
-api-version: '1.21'
