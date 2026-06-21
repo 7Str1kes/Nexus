@@ -4,8 +4,8 @@ plugins {
     id 'maven-publish'
 }
 
-group = 'org.glstudio'
-version = '1.0-SNAPSHOT'
+group = 'com.github.7Str1kes'
+version = '1.0.0'
 
 repositories {
     mavenCentral()
