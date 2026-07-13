@@ -5,10 +5,14 @@ import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.util.NumberConversions;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 @Setter
 @Getter
@@ -89,6 +93,67 @@ public class Cuboid implements Iterable<Block>, Cloneable {
         return players;
     }
 
+    public boolean contains(Entity entity) {
+        return entity != null && this.contains(entity.getLocation());
+    }
+
+    public List<Entity> getEntities() {
+        List<Entity> entities = new ArrayList<>();
+        World world = getWorld();
+        if (world == null) return entities;
+        for (Entity entity : world.getEntities()) {
+            if (this.contains(entity.getLocation())) entities.add(entity);
+        }
+        return entities;
+    }
+
+    public List<LivingEntity> getLivingEntities() {
+        List<LivingEntity> entities = new ArrayList<>();
+        World world = getWorld();
+        if (world == null) return entities;
+        for (LivingEntity entity : world.getLivingEntities()) {
+            if (this.contains(entity.getLocation())) entities.add(entity);
+        }
+        return entities;
+    }
+
+    public List<LivingEntity> getLivingEntities(EntityType... types) {
+        Set<EntityType> filter = EnumSet.noneOf(EntityType.class);
+        Collections.addAll(filter, types);
+        List<LivingEntity> entities = new ArrayList<>();
+        for (LivingEntity entity : getLivingEntities()) {
+            if (filter.contains(entity.getType())) entities.add(entity);
+        }
+        return entities;
+    }
+
+    public int kill(Predicate<LivingEntity> filter) {
+        int killed = 0;
+        for (LivingEntity entity : getLivingEntities()) {
+            if (filter.test(entity)) {
+                entity.setHealth(0);
+                killed++;
+            }
+        }
+        return killed;
+    }
+
+    public int killAll() {
+        return kill(entity -> !(entity instanceof Player));
+    }
+
+    public int killOnly(EntityType... types) {
+        Set<EntityType> filter = EnumSet.noneOf(EntityType.class);
+        Collections.addAll(filter, types);
+        return kill(entity -> filter.contains(entity.getType()));
+    }
+
+    public int killAllExcept(EntityType... types) {
+        Set<EntityType> filter = EnumSet.noneOf(EntityType.class);
+        Collections.addAll(filter, types);
+        return kill(entity -> !(entity instanceof Player) && !filter.contains(entity.getType()));
+    }
+
     public Location getLowerNE() {
         return new Location(this.getWorld(), this.x1, this.y1, this.z1);
     }
@@ -128,24 +193,12 @@ public class Cuboid implements Iterable<Block>, Cloneable {
         return this.x1;
     }
 
-    public void setX1(int x1) {
-        this.x1 = x1;
-    }
-
     public int getY1() {
         return this.y1;
     }
 
-    public void setY1(int y1) {
-        this.y1 = y1;
-    }
-
     public int getZ1() {
         return this.z1;
-    }
-
-    public void setZ1(int z1) {
-        this.z1 = z1;
     }
 
     public int getX2() {
@@ -154,10 +207,6 @@ public class Cuboid implements Iterable<Block>, Cloneable {
 
     public int getY2() {
         return this.y2;
-    }
-
-    public void setY2(int y2) {
-        this.y2 = y2;
     }
 
     public int getZ2() {
@@ -258,46 +307,25 @@ public class Cuboid implements Iterable<Block>, Cloneable {
     }
 
     public Cuboid expand(CuboidDirection direction, int amount) throws IllegalArgumentException {
-        switch (direction) {
-            case NORTH: {
-                return new Cuboid(this.worldName, this.x1 - amount, this.y1, this.z1, this.x2, this.y2, this.z2);
-            }
-            case SOUTH: {
-                return new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2 + amount, this.y2, this.z2);
-            }
-            case EAST: {
-                return new Cuboid(this.worldName, this.x1, this.y1, this.z1 - amount, this.x2, this.y2, this.z2);
-            }
-            case WEST: {
-                return new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y2, this.z2 + amount);
-            }
-            case DOWN: {
-                return new Cuboid(this.worldName, this.x1, this.y1 - amount, this.z1, this.x2, this.y2, this.z2);
-            }
-            case UP: {
-                return new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y2 + amount, this.z2);
-            }
-            default: {
-                throw new IllegalArgumentException("Invalid direction " + direction);
-            }
-        }
+        return switch (direction) {
+            case NORTH -> new Cuboid(this.worldName, this.x1 - amount, this.y1, this.z1, this.x2, this.y2, this.z2);
+            case SOUTH -> new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2 + amount, this.y2, this.z2);
+            case EAST -> new Cuboid(this.worldName, this.x1, this.y1, this.z1 - amount, this.x2, this.y2, this.z2);
+            case WEST -> new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y2, this.z2 + amount);
+            case DOWN -> new Cuboid(this.worldName, this.x1, this.y1 - amount, this.z1, this.x2, this.y2, this.z2);
+            case UP -> new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y2 + amount, this.z2);
+            default -> throw new IllegalArgumentException("Invalid direction " + direction);
+        };
     }
 
     public Cuboid outset(CuboidDirection direction, int amount) throws IllegalArgumentException {
-        switch (direction) {
-            case HORIZONTAL: {
-                return this.expand(CuboidDirection.NORTH, amount).expand(CuboidDirection.SOUTH, amount).expand(CuboidDirection.EAST, amount).expand(CuboidDirection.WEST, amount);
-            }
-            case VERTICAL: {
-                return this.expand(CuboidDirection.DOWN, amount).expand(CuboidDirection.UP, amount);
-            }
-            case BOTH: {
-                return this.outset(CuboidDirection.HORIZONTAL, amount).outset(CuboidDirection.VERTICAL, amount);
-            }
-            default: {
-                throw new IllegalArgumentException("Invalid direction " + direction);
-            }
-        }
+        return switch (direction) {
+            case HORIZONTAL ->
+                    this.expand(CuboidDirection.NORTH, amount).expand(CuboidDirection.SOUTH, amount).expand(CuboidDirection.EAST, amount).expand(CuboidDirection.WEST, amount);
+            case VERTICAL -> this.expand(CuboidDirection.DOWN, amount).expand(CuboidDirection.UP, amount);
+            case BOTH -> this.outset(CuboidDirection.HORIZONTAL, amount).outset(CuboidDirection.VERTICAL, amount);
+            default -> throw new IllegalArgumentException("Invalid direction " + direction);
+        };
     }
 
     public boolean contains(Cuboid cuboid) {
@@ -389,73 +417,57 @@ public class Cuboid implements Iterable<Block>, Cloneable {
 
     public Cuboid contract(CuboidDirection direction) {
         Cuboid face = this.getFace(direction.opposite());
-        switch (direction) {
-            case DOWN: {
+        return switch (direction) {
+            case DOWN -> {
                 while (face.containsOnly(Material.AIR) && face.y1 > this.y1) {
                     face = face.shift(CuboidDirection.DOWN, 1);
                 }
-                return new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, face.y2, this.z2);
+                yield new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, face.y2, this.z2);
             }
-            case UP: {
+            case UP -> {
                 while (face.containsOnly(Material.AIR) && face.y2 < this.y2) {
                     face = face.shift(CuboidDirection.UP, 1);
                 }
-                return new Cuboid(this.worldName, this.x1, face.y1, this.z1, this.x2, this.y2, this.z2);
+                yield new Cuboid(this.worldName, this.x1, face.y1, this.z1, this.x2, this.y2, this.z2);
             }
-            case NORTH: {
+            case NORTH -> {
                 while (face.containsOnly(Material.AIR) && face.x1 > this.x1) {
                     face = face.shift(CuboidDirection.NORTH, 1);
                 }
-                return new Cuboid(this.worldName, this.x1, this.y1, this.z1, face.x2, this.y2, this.z2);
+                yield new Cuboid(this.worldName, this.x1, this.y1, this.z1, face.x2, this.y2, this.z2);
             }
-            case SOUTH: {
+            case SOUTH -> {
                 while (face.containsOnly(Material.AIR) && face.x2 < this.x2) {
                     face = face.shift(CuboidDirection.SOUTH, 1);
                 }
-                return new Cuboid(this.worldName, face.x1, this.y1, this.z1, this.x2, this.y2, this.z2);
+                yield new Cuboid(this.worldName, face.x1, this.y1, this.z1, this.x2, this.y2, this.z2);
             }
-            case EAST: {
+            case EAST -> {
                 while (face.containsOnly(Material.AIR) && face.z1 > this.z1) {
                     face = face.shift(CuboidDirection.EAST, 1);
                 }
-                return new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y2, face.z2);
+                yield new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y2, face.z2);
             }
-            case WEST: {
+            case WEST -> {
                 while (face.containsOnly(Material.AIR) && face.z2 < this.z2) {
                     face = face.shift(CuboidDirection.WEST, 1);
                 }
-                return new Cuboid(this.worldName, this.x1, this.y1, face.z1, this.x2, this.y2, this.z2);
+                yield new Cuboid(this.worldName, this.x1, this.y1, face.z1, this.x2, this.y2, this.z2);
             }
-            default: {
-                throw new IllegalArgumentException("Invalid direction " + direction);
-            }
-        }
+            default -> throw new IllegalArgumentException("Invalid direction " + direction);
+        };
     }
 
     public Cuboid getFace(CuboidDirection direction) {
-        switch (direction) {
-            case DOWN: {
-                return new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y1, this.z2);
-            }
-            case UP: {
-                return new Cuboid(this.worldName, this.x1, this.y2, this.z1, this.x2, this.y2, this.z2);
-            }
-            case NORTH: {
-                return new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x1, this.y2, this.z2);
-            }
-            case SOUTH: {
-                return new Cuboid(this.worldName, this.x2, this.y1, this.z1, this.x2, this.y2, this.z2);
-            }
-            case EAST: {
-                return new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y2, this.z1);
-            }
-            case WEST: {
-                return new Cuboid(this.worldName, this.x1, this.y1, this.z2, this.x2, this.y2, this.z2);
-            }
-            default: {
-                throw new IllegalArgumentException("Invalid direction " + direction);
-            }
-        }
+        return switch (direction) {
+            case DOWN -> new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y1, this.z2);
+            case UP -> new Cuboid(this.worldName, this.x1, this.y2, this.z1, this.x2, this.y2, this.z2);
+            case NORTH -> new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x1, this.y2, this.z2);
+            case SOUTH -> new Cuboid(this.worldName, this.x2, this.y1, this.z1, this.x2, this.y2, this.z2);
+            case EAST -> new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y2, this.z1);
+            case WEST -> new Cuboid(this.worldName, this.x1, this.y1, this.z2, this.x2, this.y2, this.z2);
+            default -> throw new IllegalArgumentException("Invalid direction " + direction);
+        };
     }
 
     public boolean containsOnly(Material material) {
@@ -523,8 +535,7 @@ public class Cuboid implements Iterable<Block>, Cloneable {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Cuboid)) return false;
-        Cuboid cuboid = (Cuboid) o;
+        if (!(o instanceof Cuboid cuboid)) return false;
         return x1 == cuboid.x1 && y1 == cuboid.y1 && z1 == cuboid.z1 && x2 == cuboid.x2 && y2 == cuboid.y2 && z2 == cuboid.z2 && worldName.equals(cuboid.worldName);
     }
 
