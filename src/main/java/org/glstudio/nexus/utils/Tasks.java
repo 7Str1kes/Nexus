@@ -5,23 +5,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
-/**
- * Scheduling helpers bound to a plugin.
- *
- * <p>The owning plugin is resolved when a task is actually scheduled, not when this object is
- * constructed. That matters because {@link org.glstudio.nexus.api.NexusAPI} builds a Tasks
- * eagerly in its own constructor: with the plugin captured at construction time, any plugin
- * that shades Nexus without calling {@link Nexus#init(JavaPlugin)} — or that touches the API
- * before doing so — ended up with a Tasks whose plugin was null, and every method on it failed
- * inside {@code Bukkit.getScheduler()} with nothing to say why.
- *
- * <p>Prefer {@link #Tasks(JavaPlugin)}, which needs no global state at all.
- */
 public class Tasks {
-
     private final JavaPlugin explicitPlugin;
 
-    /** Uses whichever plugin called {@link Nexus#init(JavaPlugin)}. */
     public Tasks() {
         this.explicitPlugin = null;
     }
@@ -47,13 +33,6 @@ public class Tasks {
         Bukkit.getServer().getScheduler().runTask(getPlugin(), runnable);
     }
 
-    /**
-     * Runs on the main thread, immediately when the caller is already there.
-     *
-     * <p>For work that can arrive from either thread — a chat listener, a Redis subscriber —
-     * where bouncing through the scheduler when already on the main thread would only add a
-     * tick of latency. A no-op once the plugin is disabled, when scheduling would throw.
-     */
     public void runOnMain(Runnable runnable) {
         JavaPlugin plugin = getPlugin();
         if (!plugin.isEnabled()) {

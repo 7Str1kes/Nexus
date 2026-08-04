@@ -6,21 +6,20 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class LoggerUtils {
-
     private static final String LINE = "&#8b5cf6&m                                   ";
     private static final String PREFIX = "&#8b5cf6[&#c084fcNexus&#8b5cf6] ";
 
-    private static ConsoleCommandSender console = Bukkit.getConsoleSender();
+    private static ConsoleCommandSender console;
 
     @Setter
     private static boolean debugEnabled = false;
 
     private static void send(String message) {
-        if (console == null) console = Bukkit.getConsoleSender();
         try {
+            if (console == null) console = Bukkit.getConsoleSender();
             console.sendMessage(CC.t(message));
-        } catch (Exception e) {
-            Bukkit.getLogger().severe("[Nexus] Failed to send colored message: " + e.getMessage());
+        } catch (Throwable t) {
+            System.out.println(CC.strip(message));
         }
     }
 

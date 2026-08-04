@@ -7,7 +7,6 @@ import org.bukkit.entity.Player;
 import java.time.Duration;
 
 public class TitleUtils {
-
     public static void sendTitle(Player player, String title, String subtitle) {
         sendTitle(player, title, subtitle, 10, 70, 20);
     }

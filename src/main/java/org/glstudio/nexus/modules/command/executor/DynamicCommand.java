@@ -10,18 +10,8 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * The Bukkit command a {@link org.glstudio.nexus.modules.command.Command} is registered as.
- *
- * <p>Note that this enforces the permission itself. Bukkit only checks it inside
- * {@code PluginCommand#execute}, which this does not extend, so before this a
- * {@code setPermission(...)} passed to the constructor was recorded and then never consulted —
- * every command registered through the Nexus command manager ran for anyone who typed it,
- * unless the command body happened to call {@code requirePermission} itself.
- */
 @Setter
 public class DynamicCommand extends org.bukkit.command.Command {
-
     private CommandExecutor executor;
     private TabCompleter tabCompleter;
 
@@ -47,7 +37,6 @@ public class DynamicCommand extends org.bukkit.command.Command {
 
     @Override
     public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String @NotNull [] args) throws IllegalArgumentException {
-        // Otherwise the completions advertise subcommands the sender cannot run.
         if (!testPermissionSilent(sender)) {
             return new ArrayList<>();
         }
