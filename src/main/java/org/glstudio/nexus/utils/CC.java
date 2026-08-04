@@ -141,13 +141,13 @@ public class CC {
 
     public static Component miniMessage(String text) {
         if (text == null) return Component.empty();
-        return MINI.deserialize(sectionToMiniMessage(text));
+        return MINI.deserialize(legacyToMiniMessage(text));
     }
 
     public static Component miniMessage(String text, String slot, Component slotValue) {
         if (text == null) return Component.empty();
         if (slot == null || slotValue == null) return miniMessage(text);
-        return MINI.deserialize(sectionToMiniMessage(text), Placeholder.component(slot, slotValue));
+        return MINI.deserialize(legacyToMiniMessage(text), Placeholder.component(slot, slotValue));
     }
 
     public static Component componentOfUserInput(String text, boolean allowColor) {
@@ -159,7 +159,7 @@ public class CC {
         if (!allowColor) return Component.text(safe);
 
         return format == TextFormat.MINIMESSAGE
-                ? USER_SAFE_MINI.deserialize(safe)
+                ? USER_SAFE_MINI.deserialize(legacyToMiniMessage(safe))
                 : component(safe);
     }
 
@@ -172,30 +172,41 @@ public class CC {
     }
 
     public static String sectionToMiniMessage(String text) {
-        if (text == null) return "";
-        if (text.indexOf(SECTION) < 0) return text;
+        return legacyToMiniMessage(text);
+    }
 
-        StringBuilder out = new StringBuilder(text.length());
+    public static String legacyToMiniMessage(String text) {
+        if (text == null) return "";
+        if (text.indexOf(SECTION) < 0 && text.indexOf('&') < 0) return text;
+
+        int length = text.length();
+        StringBuilder out = new StringBuilder(length);
         int i = 0;
 
-        while (i < text.length()) {
-            char c = text.charAt(i);
+        while (i < length) {
+            char marker = text.charAt(i);
 
-            if (c != SECTION || i + 1 >= text.length()) {
-                out.append(c);
+            if ((marker != SECTION && marker != '&') || i + 1 >= length) {
+                out.append(marker);
                 i++;
                 continue;
             }
 
-            char code = Character.toLowerCase(text.charAt(i + 1));
+            char next = text.charAt(i + 1);
 
-            if (code == 'x' && i + 13 < text.length()) {
+            if (marker == '&' && next == '#' && i + 7 < length && isHex(text, i + 2, 6)) {
+                out.append("<color:#").append(text, i + 2, i + 8).append('>');
+                i += 8;
+                continue;
+            }
+
+            if ((next == 'x' || next == 'X') && i + 13 < length) {
                 StringBuilder hex = new StringBuilder(6);
                 boolean valid = true;
 
                 for (int k = 0; k < 6; k++) {
                     int position = i + 2 + k * 2;
-                    if (text.charAt(position) != SECTION) {
+                    if (text.charAt(position) != marker || !isHexDigit(text.charAt(position + 1))) {
                         valid = false;
                         break;
                     }
@@ -209,17 +220,28 @@ public class CC {
                 }
             }
 
-            String tag = SECTION_TAGS.get(code);
+            String tag = SECTION_TAGS.get(Character.toLowerCase(next));
             if (tag != null) {
                 out.append(tag);
                 i += 2;
                 continue;
             }
 
-            out.append(c);
+            out.append(marker);
             i++;
         }
 
         return out.toString();
+    }
+
+    private static boolean isHex(String text, int start, int length) {
+        for (int i = start; i < start + length; i++) {
+            if (!isHexDigit(text.charAt(i))) return false;
+        }
+        return true;
+    }
+
+    private static boolean isHexDigit(char c) {
+        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
     }
 }
