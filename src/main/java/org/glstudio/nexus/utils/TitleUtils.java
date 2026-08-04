@@ -1,15 +1,12 @@
 package org.glstudio.nexus.utils;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.title.Title;
 import org.bukkit.entity.Player;
 
 import java.time.Duration;
 
 public class TitleUtils {
-
-    private static final LegacyComponentSerializer SERIALIZER = LegacyComponentSerializer.legacySection();
 
     public static void sendTitle(Player player, String title, String subtitle) {
         sendTitle(player, title, subtitle, 10, 70, 20);
@@ -42,6 +39,6 @@ public class TitleUtils {
     }
 
     private static Component toComponent(String text) {
-        return SERIALIZER.deserialize(CC.t(text));
+        return CC.component(text);
     }
 }

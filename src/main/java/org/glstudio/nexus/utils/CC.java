@@ -1,5 +1,7 @@
 package org.glstudio.nexus.utils;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
 
 import java.util.ArrayList;
@@ -8,6 +10,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CC {
+
+    private static final LegacyComponentSerializer SECTION = LegacyComponentSerializer.legacySection();
 
     private static final Pattern HEX_PATTERN = Pattern.compile(
             "&#([A-Fa-f0-9]{6})" +
@@ -67,5 +71,47 @@ public class CC {
     public static String strip(String text) {
         if (text == null) return "";
         return ChatColor.stripColor(t(text));
+    }
+
+    /**
+     * Turns trusted text — a config line, a language entry, a resolved placeholder — into a
+     * styled {@link Component}.
+     *
+     * <p>Deserializing with the section sign rather than the ampersand is what makes this
+     * correct, and it is not a detail. Anything that has already been translated arrives here
+     * carrying section signs: PlaceholderAPI returns {@code %luckperms_prefix%} as
+     * {@code §c[Owner]}, and {@link #t(String)} folds {@code &c} and {@code &#RRGGBB} into the
+     * same form. An ampersand deserializer does not recognise those, so they survive as
+     * literal characters in the component's text instead of becoming style:
+     *
+     * <pre>
+     * legacyAmpersand().deserialize("§c[Owner]") → "§c[Owner]"
+     * legacySection().deserialize("§c[Owner]")   → {"color":"red","text":"[Owner]"}
+     * </pre>
+     *
+     * <p>A component carrying control characters renders differently depending on how it
+     * reaches the client — the section signs are reprocessed in a system message but not in the
+     * body of a player-chat packet — so the same line can come out coloured on one server and
+     * plain on another.
+     */
+    public static Component component(String text) {
+        return SECTION.deserialize(t(text));
+    }
+
+    /**
+     * Turns text a player typed into a component.
+     *
+     * <p>Section signs are always removed: a player must never be able to smuggle raw style
+     * into a component, whether or not they are allowed colours. {@code &} codes are honoured
+     * only when {@code allowColor} is set, otherwise they are shown as typed.
+     */
+    public static Component componentOfUserInput(String text, boolean allowColor) {
+        String safe = stripSection(text);
+        return allowColor ? component(safe) : Component.text(safe);
+    }
+
+    /** Removes raw section signs, so untrusted text cannot carry style of its own. */
+    public static String stripSection(String text) {
+        return text == null ? "" : text.replace('§', ' ');
     }
 }

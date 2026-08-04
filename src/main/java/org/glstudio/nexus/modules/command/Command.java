@@ -12,6 +12,33 @@ import java.util.stream.Collectors;
 @Getter
 public abstract class Command {
 
+    private static String noPermissionMessage = "&cYou don't have permission to execute this command.";
+    private static String playersOnlyMessage = "&cThis command can only be executed by a player.";
+
+    /**
+     * Sets the refusal shown when a sender lacks a command's permission.
+     *
+     * <p>Plugins point this at their own language file on enable, so a translated server does
+     * not answer in English. Each plugin has its own copy of these classes, so this does not
+     * leak between plugins.
+     */
+    public static void setNoPermissionMessage(String message) {
+        if (message != null && !message.isBlank()) noPermissionMessage = message;
+    }
+
+    /** Sets the refusal shown when a console sender runs a player-only command. */
+    public static void setPlayersOnlyMessage(String message) {
+        if (message != null && !message.isBlank()) playersOnlyMessage = message;
+    }
+
+    public static String getNoPermissionMessage() {
+        return noPermissionMessage;
+    }
+
+    public static String getPlayersOnlyMessage() {
+        return playersOnlyMessage;
+    }
+
     protected final JavaPlugin plugin;
     protected final CommandManager manager;
     private final String name;
@@ -60,14 +87,14 @@ public abstract class Command {
 
     protected boolean requirePlayer(CommandSender sender) {
         if (sender instanceof Player) return true;
-        sendMessage(sender, "&cThis command can only be executed by a player.");
+        sendMessage(sender, playersOnlyMessage);
         return false;
     }
 
     protected boolean requirePermission(CommandSender sender) {
         if (permission == null || permission.isEmpty()) return true;
         if (sender.hasPermission(permission)) return true;
-        sendMessage(sender, "&cYou don't have permission to execute this command.");
+        sendMessage(sender, noPermissionMessage);
         return false;
     }
 
