@@ -5,6 +5,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -81,6 +82,12 @@ public class ButtonBuilder {
         }
 
         return builder;
+    }
+
+    /** Overrides the material after construction — e.g. a per-entry icon beating a template default. */
+    public ButtonBuilder material(Material material) {
+        itemBuilder.toItemStack().setType(material);
+        return this;
     }
 
     public ButtonBuilder name(String name) {
@@ -194,6 +201,16 @@ public class ButtonBuilder {
 
     public ButtonBuilder onClick(Runnable handler) {
         this.onClick = event -> handler.run();
+        return this;
+    }
+
+    /** Alias of {@link #onClick(Runnable)} — several migrated plugins used this name. */
+    public ButtonBuilder onClickSimple(Runnable handler) {
+        return onClick(handler);
+    }
+
+    public ButtonBuilder onClickPlayer(Consumer<Player> handler) {
+        this.onClick = event -> handler.accept((Player) event.getWhoClicked());
         return this;
     }
 
