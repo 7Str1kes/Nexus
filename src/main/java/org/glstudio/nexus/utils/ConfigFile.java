@@ -303,7 +303,11 @@ public class ConfigFile extends YamlConfiguration {
     public @Nullable ConfigurationSection getConfigurationSection(@NotNull String path) {
         lock.readLock().lock();
         try {
-            return super.getConfigurationSection(path);
+            ConfigurationSection section = super.getConfigurationSection(path);
+            if (section != null) return section;
+
+            FileConfiguration defaults = defaults();
+            return defaults == null ? null : defaults.getConfigurationSection(path);
         } finally {
             lock.readLock().unlock();
         }
@@ -313,7 +317,10 @@ public class ConfigFile extends YamlConfiguration {
     public boolean isConfigurationSection(@NotNull String path) {
         lock.readLock().lock();
         try {
-            return super.isConfigurationSection(path);
+            if (super.isConfigurationSection(path)) return true;
+
+            FileConfiguration defaults = defaults();
+            return defaults != null && defaults.isConfigurationSection(path);
         } finally {
             lock.readLock().unlock();
         }

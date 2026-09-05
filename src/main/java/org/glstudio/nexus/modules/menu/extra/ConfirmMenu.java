@@ -1,11 +1,14 @@
 package org.glstudio.nexus.modules.menu.extra;
 
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.glstudio.nexus.modules.menu.Menu;
 import org.glstudio.nexus.modules.menu.MenuManager;
 import org.glstudio.nexus.modules.menu.button.Button;
+import org.glstudio.nexus.modules.menu.button.ButtonBuilder;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -23,6 +26,7 @@ public final class ConfirmMenu extends Menu {
     private final ItemStack confirmItem;
     private final int cancelSlot;
     private final ItemStack cancelItem;
+    private final ItemStack borderItem;
     private final Runnable onConfirm;
     private final Runnable onCancel;
 
@@ -32,6 +36,7 @@ public final class ConfirmMenu extends Menu {
                          int displaySlot, ItemStack displayItem,
                          int confirmSlot, ItemStack confirmItem,
                          int cancelSlot, ItemStack cancelItem,
+                         ItemStack borderItem,
                          Runnable onConfirm, Runnable onCancel) {
         super(manager, viewer, title, size);
         this.displaySlot = displaySlot;
@@ -40,6 +45,7 @@ public final class ConfirmMenu extends Menu {
         this.confirmItem = confirmItem;
         this.cancelSlot = cancelSlot;
         this.cancelItem = cancelItem;
+        this.borderItem = borderItem;
         this.onConfirm = onConfirm;
         this.onCancel = onCancel;
     }
@@ -57,6 +63,7 @@ public final class ConfirmMenu extends Menu {
     @Override
     protected void render() {
         clear();
+        if (borderItem != null) fillBorder(borderItem);
         if (displayItem != null && displaySlot >= 0) place(displaySlot, Button.of(displayItem));
         place(confirmSlot, Button.of(confirmItem, () -> decide(true)));
         place(cancelSlot, Button.of(cancelItem, () -> decide(false)));
@@ -73,6 +80,32 @@ public final class ConfirmMenu extends Menu {
         return new Builder(manager, viewer);
     }
 
+    /**
+     * Convenience matching the shape every migrated plugin's own confirm-dialog helper used
+     * before extending this class directly: a title, a display item, and confirm/cancel text
+     * (lore optional) — confirm at slot 11 on lime concrete, cancel at slot 15 on red concrete,
+     * display at slot 13, in a 27-slot dialog. Pass a border item to decorate the rest, or null
+     * for none.
+     */
+    public static void confirm(MenuManager manager, Player viewer, String title, Button displayItem,
+                                String confirmName, List<String> confirmLore, String cancelName,
+                                ItemStack borderItem, Runnable onConfirm, Runnable onCancel) {
+        Builder builder = builder(manager, viewer).title(title);
+        if (displayItem != null) builder.display(13, displayItem.getItem());
+
+        ItemStack confirmStack = ButtonBuilder.of(Material.LIME_CONCRETE)
+                .name(confirmName)
+                .lore(confirmLore == null ? List.of() : confirmLore)
+                .toItemStack();
+        ItemStack cancelStack = ButtonBuilder.of(Material.RED_CONCRETE)
+                .name(cancelName)
+                .toItemStack();
+
+        builder.confirm(11, confirmStack, onConfirm).cancel(15, cancelStack, onCancel);
+        if (borderItem != null) builder.border(borderItem);
+        builder.open();
+    }
+
     public static final class Builder {
         private final MenuManager manager;
         private final Player viewer;
@@ -84,6 +117,7 @@ public final class ConfirmMenu extends Menu {
         private ItemStack confirmItem;
         private int cancelSlot = 15;
         private ItemStack cancelItem;
+        private ItemStack borderItem;
         private Runnable onConfirm = () -> {
         };
         private Runnable onCancel = () -> {
@@ -124,9 +158,15 @@ public final class ConfirmMenu extends Menu {
             return this;
         }
 
+        /** Fills every slot the display/confirm/cancel items don't occupy — see {@link Menu#fillBorder}. */
+        public Builder border(ItemStack item) {
+            this.borderItem = item;
+            return this;
+        }
+
         public ConfirmMenu build() {
             return new ConfirmMenu(manager, viewer, title, size, displaySlot, displayItem,
-                    confirmSlot, confirmItem, cancelSlot, cancelItem, onConfirm, onCancel);
+                    confirmSlot, confirmItem, cancelSlot, cancelItem, borderItem, onConfirm, onCancel);
         }
 
         public void open() {

@@ -68,6 +68,8 @@ public class ButtonBuilder {
      * builder methods instead — this is a convenience for new, canonically-shaped config.
      */
     public static ButtonBuilder fromConfig(ConfigurationSection section) {
+        if (section == null) return new ButtonBuilder(Material.STONE);
+
         Material material = MenuConfigUtils.parseMaterial(section.getString("material"), Material.STONE);
         ButtonBuilder builder = new ButtonBuilder(material);
 
