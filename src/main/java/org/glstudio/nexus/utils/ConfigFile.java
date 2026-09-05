@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 
+import org.bukkit.configuration.Configuration;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -307,7 +308,16 @@ public class ConfigFile extends YamlConfiguration {
             if (section != null) return section;
 
             FileConfiguration defaults = defaults();
-            return defaults == null ? null : defaults.getConfigurationSection(path);
+            if (defaults == null) return null;
+
+            // Not defaults.getConfigurationSection(path): resolving a section through Bukkit's
+            // own default-value machinery is a known trap — MemorySection#getConfigurationSection
+            // sees the default is section-shaped and calls createSection(path), which creates and
+            // returns a *new, empty* section rather than the default's actual contents. Querying
+            // the jar-only config directly (which itself has no further defaults chain) sidesteps
+            // that entirely: the path is looked up as real, present data instead of a default.
+            Configuration jarOnly = defaults.getDefaults();
+            return jarOnly == null ? null : jarOnly.getConfigurationSection(path);
         } finally {
             lock.readLock().unlock();
         }
