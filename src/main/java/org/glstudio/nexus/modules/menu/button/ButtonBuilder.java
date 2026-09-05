@@ -31,6 +31,12 @@ public class ButtonBuilder {
     };
     private boolean cancelClick = true;
 
+    /** Defaults to {@link Material#STONE} — several plugins' own builder did the same, always
+     * followed immediately by {@link #material(Material)}. */
+    public ButtonBuilder() {
+        this.itemBuilder = new ItemBuilder(Material.STONE);
+    }
+
     public ButtonBuilder(Material material) {
         this.itemBuilder = new ItemBuilder(material);
     }

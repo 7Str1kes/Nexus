@@ -72,7 +72,8 @@ public abstract class Menu {
 
     // ─── lifecycle ───────────────────────────────────────────────────────────────
 
-    public final void open() {
+    /** Not final: a subclass may override to add a pre-open guard (permission, cooldown) via super.open(). */
+    public void open() {
         if (destroyed) return;
         render();
         manager.register(viewer.getUniqueId(), this);

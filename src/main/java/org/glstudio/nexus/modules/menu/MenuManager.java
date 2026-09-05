@@ -50,6 +50,11 @@ public class MenuManager {
         return menus.get(uuid);
     }
 
+    /** Alias of {@link #getOpenMenu(UUID)} — several plugins' own manager used this name. */
+    public Menu get(UUID uuid) {
+        return getOpenMenu(uuid);
+    }
+
     public Menu getOpenMenu(Player player) {
         return menus.get(player.getUniqueId());
     }
