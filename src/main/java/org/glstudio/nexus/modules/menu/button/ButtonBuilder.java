@@ -13,8 +13,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.glstudio.nexus.modules.menu.config.MenuConfigUtils;
 import org.glstudio.nexus.utils.ItemBuilder;
+import org.glstudio.nexus.utils.LoggerUtils;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -90,6 +92,25 @@ public class ButtonBuilder {
         }
 
         return builder;
+    }
+
+    /**
+     * {@link Material#valueOf} with a warn-and-fallback for a bad/missing config value — distinct
+     * from {@link MenuConfigUtils#parseMaterial(String, Material)}, which is silent and uses the
+     * more lenient {@link Material#matchMaterial}. Several plugins' own button builders had this
+     * exact method.
+     */
+    public static Material parseMaterial(String name, Material fallback, String context) {
+        if (name == null || name.isBlank()) {
+            return fallback;
+        }
+        try {
+            return Material.valueOf(name.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            LoggerUtils.logWarn("Unknown material '" + name + "'"
+                    + (context == null ? "" : " at " + context) + "; using " + fallback + ".");
+            return fallback;
+        }
     }
 
     /** Overrides the material after construction — e.g. a per-entry icon beating a template default. */
