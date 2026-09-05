@@ -156,7 +156,8 @@ public abstract class Menu {
         }
     }
 
-    public final boolean shouldCancelDrag(InventoryDragEvent event) {
+    /** Not final: a subclass with its own per-slot drag rule (independent of allowInteract) may override. */
+    public boolean shouldCancelDrag(InventoryDragEvent event) {
         if (allowInteract) return false;
         for (int rawSlot : event.getRawSlots()) {
             if (rawSlot < inventory.getSize() && !interactiveSlots.contains(rawSlot)) return true;
