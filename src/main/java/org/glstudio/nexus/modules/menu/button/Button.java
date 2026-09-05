@@ -43,6 +43,11 @@ public class Button {
         return item.clone();
     }
 
+    /** Alias of {@link #getItem()} — several plugins' own Button used this name. */
+    public ItemStack getItemStack() {
+        return getItem();
+    }
+
     public boolean isCancelClick() {
         return cancelClick;
     }
