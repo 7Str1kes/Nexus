@@ -8,7 +8,9 @@ import org.glstudio.nexus.modules.menu.MenuManager;
 import org.glstudio.nexus.modules.menu.button.Button;
 import org.glstudio.nexus.modules.menu.button.ButtonBuilder;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -27,6 +29,7 @@ public final class ConfirmMenu extends Menu {
     private final int cancelSlot;
     private final ItemStack cancelItem;
     private final ItemStack borderItem;
+    private final Map<Integer, ItemStack> extraItems;
     private final Runnable onConfirm;
     private final Runnable onCancel;
 
@@ -36,7 +39,7 @@ public final class ConfirmMenu extends Menu {
                          int displaySlot, ItemStack displayItem,
                          int confirmSlot, ItemStack confirmItem,
                          int cancelSlot, ItemStack cancelItem,
-                         ItemStack borderItem,
+                         ItemStack borderItem, Map<Integer, ItemStack> extraItems,
                          Runnable onConfirm, Runnable onCancel) {
         super(manager, viewer, title, size);
         this.displaySlot = displaySlot;
@@ -46,6 +49,7 @@ public final class ConfirmMenu extends Menu {
         this.cancelSlot = cancelSlot;
         this.cancelItem = cancelItem;
         this.borderItem = borderItem;
+        this.extraItems = extraItems;
         this.onConfirm = onConfirm;
         this.onCancel = onCancel;
     }
@@ -64,6 +68,11 @@ public final class ConfirmMenu extends Menu {
     protected void render() {
         clear();
         if (borderItem != null) fillBorder(borderItem);
+        if (extraItems != null) {
+            for (Map.Entry<Integer, ItemStack> entry : extraItems.entrySet()) {
+                place(entry.getKey(), Button.of(entry.getValue()));
+            }
+        }
         if (displayItem != null && displaySlot >= 0) place(displaySlot, Button.of(displayItem));
         place(confirmSlot, Button.of(confirmItem, () -> decide(true)));
         place(cancelSlot, Button.of(cancelItem, () -> decide(false)));
@@ -118,6 +127,7 @@ public final class ConfirmMenu extends Menu {
         private int cancelSlot = 15;
         private ItemStack cancelItem;
         private ItemStack borderItem;
+        private Map<Integer, ItemStack> extraItems;
         private Runnable onConfirm = () -> {
         };
         private Runnable onCancel = () -> {
@@ -164,9 +174,16 @@ public final class ConfirmMenu extends Menu {
             return this;
         }
 
+        /** A purely decorative/informational item at a fixed slot — e.g. an "info" tile some plugins show. */
+        public Builder extra(int slot, ItemStack item) {
+            if (this.extraItems == null) this.extraItems = new HashMap<>();
+            this.extraItems.put(slot, item);
+            return this;
+        }
+
         public ConfirmMenu build() {
             return new ConfirmMenu(manager, viewer, title, size, displaySlot, displayItem,
-                    confirmSlot, confirmItem, cancelSlot, cancelItem, borderItem, onConfirm, onCancel);
+                    confirmSlot, confirmItem, cancelSlot, cancelItem, borderItem, extraItems, onConfirm, onCancel);
         }
 
         public void open() {
