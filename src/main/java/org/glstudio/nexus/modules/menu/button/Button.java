@@ -33,6 +33,11 @@ public class Button {
         return new Button(item, action, true);
     }
 
+    /** Alias of {@code new ButtonBuilder()} — several plugins' own Button used this name. */
+    public static ButtonBuilder builder() {
+        return new ButtonBuilder();
+    }
+
     /** A clone, so placing the same Button in several slots (e.g. a filler) never aliases meta. */
     public ItemStack getItem() {
         return item.clone();
