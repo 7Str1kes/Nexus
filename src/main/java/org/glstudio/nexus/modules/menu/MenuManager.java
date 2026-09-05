@@ -82,4 +82,11 @@ public class MenuManager {
                     + " attempted to place a button at out-of-range slot " + slot + " — check its config.");
         }
     }
+
+    /** Generic one-time console warning, keyed by an arbitrary string — several plugins used this. */
+    public void warnOnce(String key, String message) {
+        if (warnedOnce.add(key)) {
+            plugin.getLogger().warning(message);
+        }
+    }
 }
