@@ -87,11 +87,18 @@ public abstract class Menu {
 
     /** Opens next tick — required when opening a menu from inside another menu's click handler. */
     public final void openLater() {
+        if (!plugin.isEnabled()) return;
         Bukkit.getScheduler().runTask(plugin, this::open);
     }
 
     public final void update() {
         if (destroyed) return;
+        if (!viewer.isOnline()) {
+            // A queued update (auto-refresh tick, an async callback resolving late) can still
+            // fire after the viewer disconnected; destroy instead of rendering into a dead session.
+            manager.unregister(viewer.getUniqueId());
+            return;
+        }
         render();
         viewer.updateInventory();
     }
