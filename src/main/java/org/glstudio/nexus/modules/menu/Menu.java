@@ -270,6 +270,10 @@ public abstract class Menu {
         return inventory;
     }
 
+    public final int getSize() {
+        return inventory.getSize();
+    }
+
     public final Player getViewer() {
         return viewer;
     }

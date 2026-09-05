@@ -22,7 +22,13 @@ import java.util.Map;
 public abstract class PaginatedMenu<T> extends Menu {
 
     private List<Integer> contentSlots;
-    private int page = 0;
+
+    /**
+     * Protected (not private) so a subclass that overrides {@link #render()} entirely — to
+     * reproduce its own pre-existing config-driven pagination convention — can clamp it directly,
+     * the same way it would clamp its own field.
+     */
+    protected int page = 0;
 
     protected PaginatedMenu(MenuManager manager, Player viewer, String title, int size) {
         super(manager, viewer, title, size);
