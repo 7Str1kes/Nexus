@@ -1,6 +1,8 @@
 package org.glstudio.nexus.api;
 
 import org.glstudio.nexus.modules.command.CommandManager;
+import org.glstudio.nexus.modules.menu.MenuManager;
+import org.glstudio.nexus.modules.menu.chat.ChatInputManager;
 import org.glstudio.nexus.utils.*;
 import lombok.Getter;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -31,6 +33,14 @@ public class NexusAPI {
 
     public CommandManager createCommandManager(JavaPlugin plugin) {
         return new CommandManager(plugin);
+    }
+
+    public MenuManager createMenuManager(JavaPlugin plugin) {
+        return new MenuManager(plugin);
+    }
+
+    public ChatInputManager createChatInputManager(JavaPlugin plugin) {
+        return new ChatInputManager(plugin);
     }
 
     public static NexusAPI get() {

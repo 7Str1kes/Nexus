@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.github.7Str1kes'
-version = '1.0.6'
+version = '1.1.0'
 
 repositories {
     mavenCentral()
@@ -13,10 +13,15 @@ repositories {
         name = "papermc-repo"
         url = "https://repo.papermc.io/repository/maven-public/"
     }
+    maven {
+        name = "placeholderapi"
+        url = "https://repo.extendedclip.com/releases/"
+    }
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
+    compileOnly("me.clip:placeholderapi:2.12.2")
 }
 
 def targetJavaVersion = 21
