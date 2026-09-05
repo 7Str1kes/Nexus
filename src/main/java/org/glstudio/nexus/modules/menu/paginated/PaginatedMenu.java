@@ -54,9 +54,17 @@ public abstract class PaginatedMenu<T> extends Menu {
         return Map.of();
     }
 
-    /** Shown across every content slot when {@link #getItems} is empty. Null draws nothing. */
+    /** Shown in {@link #getEmptySlot} when {@link #getItems} is empty. Null draws nothing. */
     protected Button getEmptyButton(Player viewer) {
         return null;
+    }
+
+    /**
+     * Slot the empty-state button renders into, or -1 to fall back to the first content slot
+     * (the default). Override to read a configured slot instead.
+     */
+    protected int getEmptySlot(Player viewer) {
+        return -1;
     }
 
     public final int getPage() {
@@ -113,7 +121,10 @@ public abstract class PaginatedMenu<T> extends Menu {
 
         if (items.isEmpty()) {
             Button empty = getEmptyButton(viewer);
-            if (empty != null) place(slots, empty);
+            if (empty != null && !slots.isEmpty()) {
+                int emptySlot = getEmptySlot(viewer);
+                place(emptySlot >= 0 ? emptySlot : slots.get(0), empty);
+            }
         } else {
             int start = page * perPage;
             int end = Math.min(items.size(), start + perPage);
