@@ -1,86 +1,25 @@
-# Compiled Java class files
-*.class
-
-# Gradle build artifacts
+# Build output
 .gradle/
 build/
 out/
-gradle-app.setting
-.gradletasknamecache
-gradle.properties
-gradle-wrapper.properties
-.gradle/
+bin/
+*.class
 
-# IntelliJ IDEA
+# IDE
 .idea/
 *.iml
 *.iws
 *.ipr
-out/
-
-# Eclipse
+.vscode/
 .project
 .classpath
 .settings/
-bin/
-.metadata/
 
-# NetBeans
-nbproject/
-nb-configuration.xml
-build.xml
-manifest.mf
-
-# VS Code
-.vscode/
-*.code-workspace
-
-# OS generated files
+# OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
-desktop.ini
 
-# Logs
-logs/
-*.log
-
-# Plugin-specific
-plugins/
-server/
-run/
-
-# Markdown files (except README.md)
-*.md
-!README.md
-
-# Gradle directory
-/gradle/
-
-# Build outputs
-*.jar
-!gradle-wrapper.jar
-!build/libs/*.jar
-
-# Temporary files
-*.tmp
-*.swp
-*.swo
-*~
-
-# Local configuration
+# Local tooling
+.claude/
 local.properties
-secret.properties
-config.yml
-settings.local.gradle
-
-# Test outputs
-test-output/
-test-results/
-
-# Dependency cache
-.gradle/caches/
+*.log

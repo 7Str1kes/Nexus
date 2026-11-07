@@ -1,0 +1,936 @@
+package org.glstudio.nexus.utils.cuboid;
+
+import com.google.common.base.Preconditions;
+import lombok.Getter;
+import lombok.Setter;
+import org.bukkit.*;
+import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.util.NumberConversions;
+
+import java.util.*;
+import java.util.function.Predicate;
+
+/**
+ * An axis-aligned box of blocks between two corners, iterable block by block.
+ *
+ * <p>Corners are normalised: {@code x1, y1, z1} is always the minimum and {@code x2, y2, z2} the maximum.
+ */
+@Setter
+@Getter
+public class Cuboid implements Iterable<Block>, Cloneable {
+
+    /** Name of the world. */
+    protected String worldName;
+    /** Minimum block X. */
+    protected int x1;
+    /** Minimum block Y. */
+    protected int y1;
+    /** Minimum block Z. */
+    protected int z1;
+    /** Maximum block X. */
+    protected int x2;
+    /** Maximum block Y. */
+    protected int y2;
+    /** Maximum block Z. */
+    protected int z2;
+    /**
+     * Creates the box spanned by two locations.
+     *
+     * @param first  one corner
+     * @param second the opposite corner, in the same world
+     * @throws IllegalArgumentException if the worlds differ
+     */
+    public Cuboid(Location first, Location second) {
+        Preconditions.checkNotNull(first, "Location 1 cannot be null");
+        Preconditions.checkNotNull(second, "Location 2 cannot be null");
+        Preconditions.checkArgument(first.getWorld().equals(second.getWorld()), "Locations must be on the same world");
+
+        this.worldName = first.getWorld().getName();
+        this.x1 = Math.min(first.getBlockX(), second.getBlockX());
+        this.y1 = Math.min(first.getBlockY(), second.getBlockY());
+        this.z1 = Math.min(first.getBlockZ(), second.getBlockZ());
+        this.x2 = Math.max(first.getBlockX(), second.getBlockX());
+        this.y2 = Math.max(first.getBlockY(), second.getBlockY());
+        this.z2 = Math.max(first.getBlockZ(), second.getBlockZ());
+    }
+    /**
+     * Creates the box spanned by two corners.
+     *
+     * @param worldName the world name
+     * @param x1        one corner's X
+     * @param y1        one corner's Y
+     * @param z1        one corner's Z
+     * @param x2        the other corner's X
+     * @param y2        the other corner's Y
+     * @param z2        the other corner's Z
+     */
+    public Cuboid(String worldName, int x1, int y1, int z1, int x2, int y2, int z2) {
+        Preconditions.checkNotNull((Object) worldName, "World name cannot be null");
+        this.worldName = worldName;
+        this.x1 = Math.min(x1, x2);
+        this.y1 = Math.min(y1, y2);
+        this.z1 = Math.min(z1, z2);
+        this.x2 = Math.max(x1, x2);
+        this.y2 = Math.max(y1, y2);
+        this.z2 = Math.max(z1, z2);
+    }
+    /**
+     * Copies a box.
+     *
+     * @param other the box to copy
+     */
+    public Cuboid(Cuboid other) {
+        this(other.getWorld().getName(), other.x1, other.y1, other.z1, other.x2, other.y2, other.z2);
+    }
+    /**
+     * Returns whether both corners resolve to locations.
+     *
+     * @return {@code true} if both corners are set
+     */
+    public boolean hasBothPositionsSet() {
+        return this.getMinimumPoint() != null && this.getMaximumPoint() != null;
+    }
+    /**
+     * Returns the minimum X.
+     *
+     * @return the lowest block X
+     */
+    public int getMinimumX() {
+        return Math.min(this.x1, this.x2);
+    }
+    /**
+     * Returns the minimum Z.
+     *
+     * @return the lowest block Z
+     */
+    public int getMinimumZ() {
+        return Math.min(this.z1, this.z2);
+    }
+    /**
+     * Returns the maximum X.
+     *
+     * @return the highest block X
+     */
+    public int getMaximumX() {
+        return Math.max(this.x1, this.x2);
+    }
+    /**
+     * Returns the maximum Z.
+     *
+     * @return the highest block Z
+     */
+    public int getMaximumZ() {
+        return Math.max(this.z1, this.z2);
+    }
+    /**
+     * Returns the maximum Y.
+     *
+     * @return the highest block Y
+     */
+    public int getMaximumY() {
+        return Math.max(this.y1, this.y2);
+    }
+    /**
+     * Returns the minimum Y.
+     *
+     * @return the lowest block Y
+     */
+    public int getMinimumY() {
+        return Math.min(this.y1, this.y2);
+    }
+    /**
+     * Returns the online players inside.
+     *
+     * @return the players
+     */
+    public Set<Player> getPlayers() {
+        Set<Player> players = new HashSet<Player>();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (this.contains(player)) {
+                players.add(player);
+            }
+        }
+        return players;
+    }
+    /**
+     * Returns whether an entity is inside.
+     *
+     * @param entity the entity
+     * @return {@code true} if inside
+     */
+    public boolean contains(Entity entity) {
+        return entity != null && this.contains(entity.getLocation());
+    }
+    /**
+     * Returns the entities inside, from the chunks it overlaps.
+     *
+     * @return the entities
+     */
+    public List<Entity> getEntities() {
+        List<Entity> entities = new ArrayList<>();
+        World world = getWorld();
+        if (world == null) return entities;
+        for (Entity entity : world.getEntities()) {
+            if (this.contains(entity.getLocation())) entities.add(entity);
+        }
+        return entities;
+    }
+    /**
+     * Returns the living entities inside.
+     *
+     * @return the living entities
+     */
+    public List<LivingEntity> getLivingEntities() {
+        List<LivingEntity> entities = new ArrayList<>();
+        World world = getWorld();
+        if (world == null) return entities;
+        for (LivingEntity entity : world.getLivingEntities()) {
+            if (this.contains(entity.getLocation())) entities.add(entity);
+        }
+        return entities;
+    }
+    /**
+     * Returns the living entities inside of the given types.
+     *
+     * @param types the types to keep
+     * @return the matching entities
+     */
+    public List<LivingEntity> getLivingEntities(EntityType... types) {
+        Set<EntityType> filter = EnumSet.noneOf(EntityType.class);
+        Collections.addAll(filter, types);
+        List<LivingEntity> entities = new ArrayList<>();
+        for (LivingEntity entity : getLivingEntities()) {
+            if (filter.contains(entity.getType())) entities.add(entity);
+        }
+        return entities;
+    }
+    /**
+     * Kills the living entities inside that match {@code filter} by setting their health to 0.
+     *
+     * @param filter selects the entities to kill
+     * @return how many were killed
+     */
+    public int kill(Predicate<LivingEntity> filter) {
+        int killed = 0;
+        for (LivingEntity entity : getLivingEntities()) {
+            if (filter.test(entity)) {
+                entity.setHealth(0);
+                killed++;
+            }
+        }
+        return killed;
+    }
+    /**
+     * Kills every living entity inside except players.
+     *
+     * @return how many were killed
+     */
+    public int killAll() {
+        return kill(entity -> !(entity instanceof Player));
+    }
+    /**
+     * Kills the living entities inside of the given types.
+     *
+     * @param types the types to kill
+     * @return how many were killed
+     */
+    public int killOnly(EntityType... types) {
+        Set<EntityType> filter = EnumSet.noneOf(EntityType.class);
+        Collections.addAll(filter, types);
+        return kill(entity -> filter.contains(entity.getType()));
+    }
+    /**
+     * Kills every living entity inside except players and the given types.
+     *
+     * @param types the types to spare
+     * @return how many were killed
+     */
+    public int killAllExcept(EntityType... types) {
+        Set<EntityType> filter = EnumSet.noneOf(EntityType.class);
+        Collections.addAll(filter, types);
+        return kill(entity -> !(entity instanceof Player) && !filter.contains(entity.getType()));
+    }
+    /**
+     * Returns the minimum corner.
+     *
+     * @return the corner with the lowest coordinates
+     */
+    public Location getLowerNE() {
+        return new Location(this.getWorld(), this.x1, this.y1, this.z1);
+    }
+    /**
+     * Returns the maximum corner.
+     *
+     * @return the corner with the highest coordinates
+     */
+    public Location getUpperSW() {
+        return new Location(this.getWorld(), this.x2, this.y2, this.z2);
+    }
+    /**
+     * Returns the centre point.
+     *
+     * @return the centre
+     */
+    public Location getCenter() {
+        int x1 = this.x2 + 1;
+        int y1 = this.y2 + 1;
+        int z1 = this.z2 + 1;
+        return new Location(this.getWorld(), this.x1 + (x1 - this.x1) / 2.0, this.y1 + (y1 - this.y1) / 2.0, this.z1 + (z1 - this.z1) / 2.0);
+    }
+    /**
+     * Returns the world name.
+     *
+     * @return the name
+     */
+    public String getWorldName() {
+        return this.worldName;
+    }
+    /**
+     * Returns the world, looked up by name.
+     *
+     * @return the world, or {@code null} if it is not loaded
+     */
+    public World getWorld() {
+        return Bukkit.getWorld(this.worldName);
+    }
+    /**
+     * Returns the size on X, both ends included.
+     *
+     * @return the number of blocks
+     */
+    public int getSizeX() {
+        return this.x2 - this.x1 + 1;
+    }
+    /**
+     * Returns the size on Y, both ends included.
+     *
+     * @return the number of blocks
+     */
+    public int getSizeY() {
+        return this.y2 - this.y1 + 1;
+    }
+    /**
+     * Returns the size on Z, both ends included.
+     *
+     * @return the number of blocks
+     */
+    public int getSizeZ() {
+        return this.z2 - this.z1 + 1;
+    }
+    /**
+     * Returns the minimum X.
+     *
+     * @return the lowest block X
+     */
+    public int getX1() {
+        return this.x1;
+    }
+    /**
+     * Returns the minimum Y.
+     *
+     * @return the lowest block Y
+     */
+    public int getY1() {
+        return this.y1;
+    }
+    /**
+     * Returns the minimum Z.
+     *
+     * @return the lowest block Z
+     */
+    public int getZ1() {
+        return this.z1;
+    }
+    /**
+     * Returns the maximum X.
+     *
+     * @return the highest block X
+     */
+    public int getX2() {
+        return this.x2;
+    }
+    /**
+     * Returns the maximum Y.
+     *
+     * @return the highest block Y
+     */
+    public int getY2() {
+        return this.y2;
+    }
+    /**
+     * Returns the maximum Z.
+     *
+     * @return the highest block Z
+     */
+    public int getZ2() {
+        return this.z2;
+    }
+    /**
+     * Returns the locations of the eight corner blocks.
+     *
+     * @return the corners
+     */
+    public Location[] getCornerLocations() {
+        Location[] result = new Location[8];
+        Block[] cornerBlocks = this.getCornerBlocks();
+        for (int i = 0; i < cornerBlocks.length; ++i) {
+            result[i] = cornerBlocks[i].getLocation();
+        }
+        return result;
+    }
+    /**
+     * Returns the eight corner blocks.
+     *
+     * @return the corners
+     */
+    public Block[] getCornerBlocks() {
+        Block[] result = new Block[8];
+        World world = this.getWorld();
+        result[0] = world.getBlockAt(this.x1, this.y1, this.z1);
+        result[1] = world.getBlockAt(this.x1, this.y1, this.z2);
+        result[2] = world.getBlockAt(this.x1, this.y2, this.z1);
+        result[3] = world.getBlockAt(this.x1, this.y2, this.z2);
+        result[4] = world.getBlockAt(this.x2, this.y1, this.z1);
+        result[5] = world.getBlockAt(this.x2, this.y1, this.z2);
+        result[6] = world.getBlockAt(this.x2, this.y2, this.z1);
+        result[7] = world.getBlockAt(this.x2, this.y2, this.z2);
+        return result;
+    }
+    /**
+     * Returns a copy moved {@code amount} blocks in a direction.
+     *
+     * @param direction a cardinal direction, up or down
+     * @param amount    how far
+     * @return the moved box
+     * @throws IllegalArgumentException for a combined direction
+     */
+    public Cuboid shift(CuboidDirection direction, int amount) throws IllegalArgumentException {
+        return this.expand(direction, amount).expand(direction.opposite(), -amount);
+    }
+    /**
+     * Returns a copy shrunk by {@code amount} on the faces of a direction group.
+     *
+     * @param direction {@code HORIZONTAL}, {@code VERTICAL} or {@code BOTH}
+     * @param amount    how many blocks
+     * @return the smaller box
+     * @throws IllegalArgumentException for another direction
+     */
+    public Cuboid inset(CuboidDirection direction, int amount) throws IllegalArgumentException {
+        return this.outset(direction, -amount);
+    }
+    /**
+     * Returns the four side walls between two heights.
+     *
+     * @param level  the lowest Y
+     * @param height the highest Y
+     * @return the wall blocks
+     */
+    public List<Block> getWalls(int level, int height) {
+        List<Block> blocks = new ArrayList<>();
+        World world = getWorld();
+
+        for (int x = this.x1; x <= this.x2; x++) {
+            for (int i = level; i <= height; i++) {
+                blocks.add(world.getBlockAt(x, i, this.z1));
+                blocks.add(world.getBlockAt(x, i, this.z2));
+            }
+        }
+
+        for (int y = level; y <= height; y++) {
+            for (int z = this.z1; z <= this.z2; z++) {
+                blocks.add(world.getBlockAt(this.x1, y, z));
+                blocks.add(world.getBlockAt(this.x2, y, z));
+            }
+        }
+
+        return blocks;
+    }
+    /**
+     * Returns the wall blocks at a player's height within a distance of them, skipping unloaded chunks.
+     *
+     * @param playerX  the player's block X
+     * @param playerY  the player's block Y
+     * @param playerZ  the player's block Z
+     * @param distance the maximum squared distance
+     * @return the nearby wall blocks
+     */
+    public List<Block> getWalls(int playerX, int playerY, int playerZ, int distance) {
+        List<Block> blocks = new ArrayList<>();
+        World world = getWorld();
+
+        for (int x = this.x1; x <= this.x2; x++) {
+            for (int i = playerY; i <= playerY; i++) {
+                double calcDist1 = calcDist(x, i, z1, playerX, playerY, playerZ);
+                double calcDist2 = calcDist(x, i, z2, playerX, playerY, playerZ);
+
+                if (calcDist1 <= distance) {
+                    if (world.isChunkLoaded(x >> 4, z1 >> 4)) blocks.add(world.getBlockAt(x, i, this.z1));
+                }
+
+                if (calcDist2 <= distance) {
+                    if (world.isChunkLoaded(x >> 4, z2 >> 4)) blocks.add(world.getBlockAt(x, i, this.z2));
+                }
+            }
+        }
+
+        for (int y = playerY; y <= playerY; y++) {
+            for (int z = this.z1; z <= this.z2; z++) {
+                double calcDist1 = calcDist(x1, y, z, playerX, playerY, playerZ);
+                double calcDist2 = calcDist(x2, y, z, playerX, playerY, playerZ);
+
+                if (calcDist1 <= distance) {
+                    if (world.isChunkLoaded(x1 >> 4, z >> 4)) blocks.add(world.getBlockAt(this.x1, y, z));
+                }
+
+                if (calcDist2 <= distance) {
+                    if (world.isChunkLoaded(x2 >> 4, z >> 4)) blocks.add(world.getBlockAt(this.x2, y, z));
+                }
+            }
+        }
+
+        return blocks;
+    }
+
+    private double calcDist(int baseX, int baseY, int baseZ, int otherX, int otherY, int otherZ) {
+        return NumberConversions.square(baseX - otherX) + NumberConversions.square(baseY - otherY) + NumberConversions.square(baseZ - otherZ);
+    }
+    /**
+     * Returns a copy grown by {@code amount} on one face.
+     *
+     * @param direction a cardinal direction, up or down
+     * @param amount    how many blocks
+     * @return the larger box
+     * @throws IllegalArgumentException for a combined direction
+     */
+    public Cuboid expand(CuboidDirection direction, int amount) throws IllegalArgumentException {
+        return switch (direction) {
+            case NORTH -> new Cuboid(this.worldName, this.x1 - amount, this.y1, this.z1, this.x2, this.y2, this.z2);
+            case SOUTH -> new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2 + amount, this.y2, this.z2);
+            case EAST -> new Cuboid(this.worldName, this.x1, this.y1, this.z1 - amount, this.x2, this.y2, this.z2);
+            case WEST -> new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y2, this.z2 + amount);
+            case DOWN -> new Cuboid(this.worldName, this.x1, this.y1 - amount, this.z1, this.x2, this.y2, this.z2);
+            case UP -> new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y2 + amount, this.z2);
+            default -> throw new IllegalArgumentException("Invalid direction " + direction);
+        };
+    }
+    /**
+     * Returns a copy grown by {@code amount} on the faces of a direction group.
+     *
+     * @param direction {@code HORIZONTAL}, {@code VERTICAL} or {@code BOTH}
+     * @param amount    how many blocks
+     * @return the larger box
+     * @throws IllegalArgumentException for another direction
+     */
+    public Cuboid outset(CuboidDirection direction, int amount) throws IllegalArgumentException {
+        return switch (direction) {
+            case HORIZONTAL ->
+                    this.expand(CuboidDirection.NORTH, amount).expand(CuboidDirection.SOUTH, amount).expand(CuboidDirection.EAST, amount).expand(CuboidDirection.WEST, amount);
+            case VERTICAL -> this.expand(CuboidDirection.DOWN, amount).expand(CuboidDirection.UP, amount);
+            case BOTH -> this.outset(CuboidDirection.HORIZONTAL, amount).outset(CuboidDirection.VERTICAL, amount);
+            default -> throw new IllegalArgumentException("Invalid direction " + direction);
+        };
+    }
+    /**
+     * Returns whether either corner of another box is inside this one.
+     *
+     * @param cuboid the other box
+     * @return {@code true} if they touch at a corner
+     */
+    public boolean contains(Cuboid cuboid) {
+        return this.contains(cuboid.getMinimumPoint()) || this.contains(cuboid.getMaximumPoint());
+    }
+    /**
+     * Returns whether a player stands inside.
+     *
+     * @param player the player
+     * @return {@code true} if inside
+     */
+    public boolean contains(Player player) {
+        return this.contains(player.getLocation());
+    }
+    /**
+     * Returns whether a column is inside, ignoring height.
+     *
+     * @param world the world
+     * @param x     block X
+     * @param z     block Z
+     * @return {@code true} if inside
+     */
+    public boolean contains(World world, int x, int z) {
+        return (world == null || this.getWorld().equals(world)) && x >= this.x1 && x <= this.x2 && z >= this.z1 && z <= this.z2;
+    }
+    /**
+     * Returns whether a block position is inside, in this shape's world.
+     *
+     * @param x block X
+     * @param y block Y
+     * @param z block Z
+     * @return {@code true} if inside
+     */
+    public boolean contains(int x, int y, int z) {
+        return x >= this.x1 && x <= this.x2 && y >= this.y1 && y <= this.y2 && z >= this.z1 && z <= this.z2;
+    }
+    /**
+     * Returns whether a column is inside, ignoring height and world.
+     *
+     * @param x block X
+     * @param z block Z
+     * @return {@code true} if inside
+     */
+    public boolean containsNoY(int x, int z) {
+        return x >= this.x1 && x <= this.x2 && z >= this.z1 && z <= this.z2;
+    }
+    /**
+     * Returns whether a block is inside.
+     *
+     * @param block the block
+     * @return {@code true} if inside
+     */
+    public boolean contains(Block block) {
+        return this.contains(block.getLocation());
+    }
+    /**
+     * Returns whether a location is inside and in the same world.
+     *
+     * @param location the location, may be {@code null}
+     * @return {@code true} if inside
+     */
+    public boolean contains(Location location) {
+        if (location == null || this.worldName == null) {
+            return false;
+        }
+        World world = location.getWorld();
+        return world != null && this.worldName.equals(location.getWorld().getName()) && this.contains(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+    }
+    /**
+     * Returns whether a location's column is inside, ignoring height.
+     *
+     * @param location the location
+     * @return {@code true} if inside
+     */
+    public boolean containsNoY(Location location) {
+        if (location == null || this.worldName == null) {
+            return false;
+        }
+        World world = location.getWorld();
+        return world != null && this.worldName.equals(location.getWorld().getName()) && this.containsNoY(location.getBlockX(), location.getBlockZ());
+    }
+    /**
+     * Returns the number of blocks inside.
+     *
+     * @return the volume
+     */
+    public int getVolume() {
+        return this.getSizeX() * this.getSizeY() * this.getSizeZ();
+    }
+    /**
+     * Returns the footprint on the X/Z plane.
+     *
+     * @return the number of columns
+     */
+    public int getArea() {
+        Location min = this.getMinimumPoint();
+        Location max = this.getMaximumPoint();
+        return (max.getBlockX() - min.getBlockX() + 1) * (max.getBlockZ() - min.getBlockZ() + 1);
+    }
+    /**
+     * Returns the average light level of the empty blocks inside.
+     *
+     * @return the average, 0 if there are none
+     */
+    public byte getAverageLightLevel() {
+        long total = 0L;
+        int count = 0;
+        for (Block block : this) {
+            if (block.isEmpty()) {
+                total += block.getLightLevel();
+                ++count;
+            }
+        }
+        return (byte) ((count > 0) ? ((byte) (total / count)) : 0);
+    }
+    /**
+     * Returns the minimum corner as a location.
+     *
+     * @return the corner
+     */
+    public Location getMinimumPoint() {
+        return new Location(this.getWorld(), (double) Math.min(this.x1, this.x2), (double) Math.min(this.y1, this.y2), (double) Math.min(this.z1, this.z2));
+    }
+    /**
+     * Returns the maximum corner as a location.
+     *
+     * @return the corner
+     */
+    public Location getMaximumPoint() {
+        return new Location(this.getWorld(), (double) Math.max(this.x1, this.x2), (double) Math.max(this.y1, this.y2), (double) Math.max(this.z1, this.z2));
+    }
+    /**
+     * Returns the distance between the corners on X.
+     *
+     * @return the width, excluding one end
+     */
+    public int getWidth() {
+        return this.getMaximumPoint().getBlockX() - this.getMinimumPoint().getBlockX();
+    }
+    /**
+     * Returns the distance between the corners on Y.
+     *
+     * @return the height, excluding one end
+     */
+    public int getHeight() {
+        return this.getMaximumPoint().getBlockY() - this.getMinimumPoint().getBlockY();
+    }
+    /**
+     * Returns the distance between the corners on Z.
+     *
+     * @return the length, excluding one end
+     */
+    public int getLength() {
+        return this.getMaximumPoint().getBlockZ() - this.getMinimumPoint().getBlockZ();
+    }
+    /**
+     * Returns the smallest box that still holds every non-air block.
+     *
+     * @return the contracted box
+     */
+    public Cuboid contract() {
+        return this.contract(CuboidDirection.DOWN).contract(CuboidDirection.SOUTH).contract(CuboidDirection.EAST).contract(CuboidDirection.UP).contract(CuboidDirection.NORTH)
+                .contract(CuboidDirection.WEST);
+    }
+    /**
+     * Returns a copy whose face in {@code direction} moved inwards past air-only layers.
+     *
+     * @param direction a cardinal direction, up or down
+     * @return the contracted box
+     * @throws IllegalArgumentException for a combined direction
+     */
+    public Cuboid contract(CuboidDirection direction) {
+        Cuboid face = this.getFace(direction.opposite());
+        return switch (direction) {
+            case DOWN -> {
+                while (face.containsOnly(Material.AIR) && face.y1 > this.y1) {
+                    face = face.shift(CuboidDirection.DOWN, 1);
+                }
+                yield new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, face.y2, this.z2);
+            }
+            case UP -> {
+                while (face.containsOnly(Material.AIR) && face.y2 < this.y2) {
+                    face = face.shift(CuboidDirection.UP, 1);
+                }
+                yield new Cuboid(this.worldName, this.x1, face.y1, this.z1, this.x2, this.y2, this.z2);
+            }
+            case NORTH -> {
+                while (face.containsOnly(Material.AIR) && face.x1 > this.x1) {
+                    face = face.shift(CuboidDirection.NORTH, 1);
+                }
+                yield new Cuboid(this.worldName, this.x1, this.y1, this.z1, face.x2, this.y2, this.z2);
+            }
+            case SOUTH -> {
+                while (face.containsOnly(Material.AIR) && face.x2 < this.x2) {
+                    face = face.shift(CuboidDirection.SOUTH, 1);
+                }
+                yield new Cuboid(this.worldName, face.x1, this.y1, this.z1, this.x2, this.y2, this.z2);
+            }
+            case EAST -> {
+                while (face.containsOnly(Material.AIR) && face.z1 > this.z1) {
+                    face = face.shift(CuboidDirection.EAST, 1);
+                }
+                yield new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y2, face.z2);
+            }
+            case WEST -> {
+                while (face.containsOnly(Material.AIR) && face.z2 < this.z2) {
+                    face = face.shift(CuboidDirection.WEST, 1);
+                }
+                yield new Cuboid(this.worldName, this.x1, this.y1, face.z1, this.x2, this.y2, this.z2);
+            }
+            default -> throw new IllegalArgumentException("Invalid direction " + direction);
+        };
+    }
+    /**
+     * Returns the one-block-thick face in a direction.
+     *
+     * @param direction a cardinal direction, up or down
+     * @return the face
+     * @throws IllegalArgumentException for a combined direction
+     */
+    public Cuboid getFace(CuboidDirection direction) {
+        return switch (direction) {
+            case DOWN -> new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y1, this.z2);
+            case UP -> new Cuboid(this.worldName, this.x1, this.y2, this.z1, this.x2, this.y2, this.z2);
+            case NORTH -> new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x1, this.y2, this.z2);
+            case SOUTH -> new Cuboid(this.worldName, this.x2, this.y1, this.z1, this.x2, this.y2, this.z2);
+            case EAST -> new Cuboid(this.worldName, this.x1, this.y1, this.z1, this.x2, this.y2, this.z1);
+            case WEST -> new Cuboid(this.worldName, this.x1, this.y1, this.z2, this.x2, this.y2, this.z2);
+            default -> throw new IllegalArgumentException("Invalid direction " + direction);
+        };
+    }
+    /**
+     * Returns whether every block inside is of one material.
+     *
+     * @param material the material
+     * @return {@code true} if all blocks match
+     */
+    public boolean containsOnly(Material material) {
+        for (Block block : this) {
+            if (block.getType() != material) {
+                return false;
+            }
+        }
+        return true;
+    }
+    /**
+     * Returns the smallest box holding this one and {@code other}.
+     *
+     * @param other the other box, may be {@code null}
+     * @return the bounding box
+     */
+    public Cuboid getBoundingCuboid(Cuboid other) {
+        if (other == null) {
+            return this;
+        }
+        int xMin = Math.min(this.x1, other.x1);
+        int yMin = Math.min(this.y1, other.y1);
+        int zMin = Math.min(this.z1, other.z1);
+        int xMax = Math.max(this.x2, other.x2);
+        int yMax = Math.max(this.y2, other.y2);
+        int zMax = Math.max(this.z2, other.z2);
+        return new Cuboid(this.worldName, xMin, yMin, zMin, xMax, yMax, zMax);
+    }
+    /**
+     * Returns the block at an offset from the minimum corner.
+     *
+     * @param x offset on X
+     * @param y offset on Y
+     * @param z offset on Z
+     * @return the block
+     */
+    public Block getRelativeBlock(int x, int y, int z) {
+        return this.getWorld().getBlockAt(this.x1 + x, this.y1 + y, this.z1 + z);
+    }
+    /**
+     * Returns the block at an offset from the minimum corner in another world.
+     *
+     * @param world the world
+     * @param x     offset on X
+     * @param y     offset on Y
+     * @param z     offset on Z
+     * @return the block
+     */
+    public Block getRelativeBlock(World world, int x, int y, int z) {
+        return world.getBlockAt(this.x1 + x, this.y1 + y, this.z1 + z);
+    }
+    /**
+     * Returns the chunks this shape overlaps, loading them if needed.
+     *
+     * @return the chunks
+     */
+    public List<Chunk> getChunks() {
+        World world = this.getWorld();
+        int x1 = this.x1 & 0xFFFFFFF0;
+        int x2 = this.x2 & 0xFFFFFFF0;
+        int z1 = this.z1 & 0xFFFFFFF0;
+        int z2 = this.z2 & 0xFFFFFFF0;
+        List<Chunk> result = new ArrayList<Chunk>(x2 - x1 + 16 + (z2 - z1) * 16);
+        for (int x3 = x1; x3 <= x2; x3 += 16) {
+            for (int z3 = z1; z3 <= z2; z3 += 16) {
+                result.add(world.getChunkAt(x3 >> 4, z3 >> 4));
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public Iterator<Block> iterator() {
+        return new CuboidBlockIterator(this.getWorld(), this.x1, this.y1, this.z1, this.x2, this.y2, this.z2);
+    }
+    /**
+     * Iterates over the block locations inside.
+     *
+     * @return a new iterator
+     */
+    public Iterator<Location> locationIterator() {
+        return new CuboidLocationIterator(this.getWorld(), this.x1, this.y1, this.z1, this.x2, this.y2, this.z2);
+    }
+    /**
+     * Copies this box.
+     *
+     * @return the copy
+     */
+    public Cuboid clone() {
+        try {
+            return (Cuboid) super.clone();
+        } catch (CloneNotSupportedException ex) {
+            throw new RuntimeException("This could never happen", ex);
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Cuboid cuboid)) return false;
+        return x1 == cuboid.x1 && y1 == cuboid.y1 && z1 == cuboid.z1 && x2 == cuboid.x2 && y2 == cuboid.y2 && z2 == cuboid.z2 && worldName.equals(cuboid.worldName);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(worldName, x1, y1, z1, x2, y2, z2);
+    }
+
+    @Override
+    public String toString() {
+        return "Cuboid: " + this.worldName + ',' + this.x1 + ',' + this.y1 + ',' + this.z1 + "=>" + this.x2 + ',' + this.y2 + ',' + this.z2;
+    }
+    /**
+     * Returns the minimum X.
+     *
+     * @return the lowest block X
+     */
+    public int getLowerX() {
+        return this.x1;
+    }
+    /**
+     * Returns the minimum Y.
+     *
+     * @return the lowest block Y
+     */
+    public int getLowerY() {
+        return this.y1;
+    }
+    /**
+     * Returns the minimum Z.
+     *
+     * @return the lowest block Z
+     */
+    public int getLowerZ() {
+        return this.z1;
+    }
+    /**
+     * Returns the maximum X.
+     *
+     * @return the highest block X
+     */
+    public int getUpperX() {
+        return this.x2;
+    }
+    /**
+     * Returns the maximum Y.
+     *
+     * @return the highest block Y
+     */
+    public int getUpperY() {
+        return this.y2;
+    }
+    /**
+     * Returns the maximum Z.
+     *
+     * @return the highest block Z
+     */
+    public int getUpperZ() {
+        return this.z2;
+    }
+}

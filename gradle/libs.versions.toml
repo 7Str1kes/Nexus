@@ -1,0 +1,27 @@
+[versions]
+paper = "1.21.11-R0.1-SNAPSHOT"
+placeholderapi = "2.12.2"
+vault = "1.7"
+hikari = "6.0.0"
+mongodb = "5.1.0"
+jedis = "7.2.0"
+gson = "2.11.0"
+h2 = "2.2.224"
+junit = "5.11.3"
+junit-platform = "1.11.3"
+lombok-plugin = "8.14"
+
+[libraries]
+paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
+placeholderapi = { module = "me.clip:placeholderapi", version.ref = "placeholderapi" }
+vault-api = { module = "com.github.MilkBowl:VaultAPI", version.ref = "vault" }
+hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
+mongodb-driver-sync = { module = "org.mongodb:mongodb-driver-sync", version.ref = "mongodb" }
+jedis = { module = "redis.clients:jedis", version.ref = "jedis" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+h2 = { module = "com.h2database:h2", version.ref = "h2" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+
+[plugins]
+lombok = { id = "io.freefair.lombok", version.ref = "lombok-plugin" }
