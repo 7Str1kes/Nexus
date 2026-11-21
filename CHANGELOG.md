@@ -2,6 +2,34 @@
 
 Todas las versiones siguen [Semantic Versioning](https://semver.org/lang/es/). Las etiquetas de git llevan prefijo `v` (`v2.0.0`), que es la versión que se pide a JitPack.
 
+## [2.1.0] — 2026-11-21
+
+Versión menor: todo es nuevo o compatible. Recoge el código que los plugins GL tenían duplicado.
+
+### Añadido
+
+- **Ciclo de vida.** `Steps` (pasos protegidos de arranque y apagado, con `Dueño#paso` en el registro), `ConfigSet` (base del `ConfigManager`: `track`, `all` y `reload`) y `ConfigFiles` (`checkVersions` y `validateAll` sobre todos los archivos).
+- **Comandos.**
+  - `SubCommand.filter` y `join`, y `Completions` para usarlos fuera de un subcomando.
+  - `HelpSubCommand`: ayuda por líneas de `language.yml` (con las de admin aparte) o por listado de subcomandos con permiso; `describedAs` para su uso y descripción.
+- **Acciones y condiciones.**
+  - `ActionRunner`: listas completas con `server`, `perm-command`, `wait`, `random`, `block-until-done` y las comprobaciones `permission`, `chance`, `item`, `take`, `if`, `limit` y `cost`, que se comprueban en bloque antes de cobrar nada. Tipos propios con `register`.
+  - `UsageLimits` y `YamlUsageLimits` para los usos de `[limit]`.
+  - `Condition`, `Period` y `Schedule` (horarios por días, horas y día o noche del mundo).
+- **Jugadores.** `PlayerCache<T>`: datos de los jugadores conectados, con cargas que se descartan si el jugador ya salió, y `update` para cambiarlos sin cargarlos.
+- **Utilidades.**
+  - `Cooldowns` (esperas por jugador y clave, también de duración fija).
+  - `Colors` (hexadecimal, nombres de MiniMessage, de Bukkit o una paleta propia) y `FireworkSpec` (leer de la configuración y lanzar).
+  - `Amounts` (`1.5k`, `2m`), `TimeZones`, `Position` (ubicación por nombre de mundo) y `EntityVisibility`.
+  - `ItemText` (un ítem en una columna de texto).
+- **Menús.** `MenuSupport`: título, huecos, iconos con nombre y lore del archivo, pares de placeholders y petición por chat con mensaje de cancelación.
+- **WorldGuard.** `WorldGuardHook` (`regionsAt`, `inAny`, `state`, `denied`, `canBuild`), que solo toca clases de WorldGuard si está activo; el plugin no necesita WorldGuard para compilar.
+- **`nexus-storage`.** `StorageDefaults` y `DatabaseSettings`: leen el `database.yml` común de los plugins GL, abren el pool SQL o Mongo y explican el fallo de conexión.
+
+### Cambiado
+
+- **`LanguageFile` aplica PlaceholderAPI a la plantilla antes de meter los valores.** Un texto escrito por un jugador o un administrador que llegue como valor se muestra tal cual. Un plugin que pasara a propósito un valor con `%placeholders%` para que se resolviera tiene que resolverlo antes.
+
 ## [2.0.0] — 2026-10-31
 
 Versión mayor: cambian las coordenadas y algunas firmas. Los plugins GL se migran en bloque; para un plugin externo basta con los pasos de "Migración desde 1.x".

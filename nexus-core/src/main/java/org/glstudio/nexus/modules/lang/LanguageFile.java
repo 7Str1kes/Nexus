@@ -148,8 +148,10 @@ public class LanguageFile {
      * @return the resolved text, still in the file's format
      */
     public String apply(@Nullable OfflinePlayer viewer, String template, Object... pairs) {
-        String result = Placeholders.apply(template, pairs);
-        return papi ? Placeholders.papi(viewer, result) : result;
+        // PlaceholderAPI reads the template before the values go in, so a value typed by a player,
+        // such as a condition or a command, is shown as written instead of being filled in.
+        String base = papi ? Placeholders.papi(viewer, template) : template;
+        return Placeholders.apply(base, pairs);
     }
 
     /**

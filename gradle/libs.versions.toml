@@ -7,6 +7,8 @@ mongodb = "5.1.0"
 jedis = "7.2.0"
 gson = "2.11.0"
 h2 = "2.2.224"
+worldguard = "7.0.14"
+worldedit = "7.3.16"
 junit = "5.11.3"
 junit-platform = "1.11.3"
 lombok-plugin = "8.14"
@@ -20,6 +22,8 @@ mongodb-driver-sync = { module = "org.mongodb:mongodb-driver-sync", version.ref 
 jedis = { module = "redis.clients:jedis", version.ref = "jedis" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
+worldguard-bukkit = { module = "com.sk89q.worldguard:worldguard-bukkit", version.ref = "worldguard" }
+worldedit-bukkit = { module = "com.sk89q.worldedit:worldedit-bukkit", version.ref = "worldedit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
 

@@ -5,6 +5,8 @@ dependencies {
     compileOnly(libs.vault.api) {
         exclude(group = "org.bukkit", module = "bukkit")
     }
+    compileOnly(libs.worldguard.bukkit)
+    compileOnly(libs.worldedit.bukkit)
 
     testImplementation(libs.paper.api)
     testImplementation(libs.junit.jupiter)

@@ -6,7 +6,7 @@ allprojects {
     // JitPack serves multi-module builds as com.github.<user>.<repo>:<module>; keeping the same group
     // here lets plugins substitute this build with --include-build during development.
     group = "com.github.7Str1kes.Nexus"
-    version = "2.0.0"
+    version = "2.1.0"
 }
 
 subprojects {
@@ -18,6 +18,7 @@ subprojects {
         mavenCentral()
         maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://repo.extendedclip.com/releases/")
+        maven("https://maven.enginehub.org/repo/")
         maven("https://jitpack.io")
     }
 

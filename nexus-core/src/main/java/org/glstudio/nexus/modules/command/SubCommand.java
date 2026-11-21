@@ -2,6 +2,7 @@ package org.glstudio.nexus.modules.command;
 
 import org.bukkit.command.CommandSender;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -118,5 +119,27 @@ public abstract class SubCommand<C> {
      */
     String key() {
         return name.toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Keeps the options that start with what was typed, ignoring case.
+     *
+     * @param options the options
+     * @param typed   what was typed so far
+     * @return the matching options
+     */
+    protected static List<String> filter(Collection<String> options, String typed) {
+        return Completions.filter(options, typed);
+    }
+
+    /**
+     * Joins the arguments from one on, with spaces.
+     *
+     * @param args the arguments
+     * @param from the first one to join
+     * @return the text, empty when there are none
+     */
+    protected static String join(String[] args, int from) {
+        return Completions.join(args, from);
     }
 }

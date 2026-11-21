@@ -2,7 +2,7 @@
 
 Nexus es la librería común de los plugins `GL-*` para Paper. No es un plugin: cada plugin la empaqueta (shade) dentro de su jar y usa su propia copia. Como Paper resuelve primero las clases del jar de cada plugin, el estado estático de Nexus (prefijo de consola, mensajes de comandos...) es independiente en cada plugin.
 
-Versión actual: **2.0.0**. Cambios por versión en `CHANGELOG.md`.
+Versión actual: **2.1.0**. Cambios por versión en `CHANGELOG.md`.
 
 ## Índice
 
@@ -19,7 +19,7 @@ Versión actual: **2.0.0**. Cambios por versión en `CHANGELOG.md`.
 11. [Duraciones](#11-duraciones)
 12. [Efectos y registros](#12-efectos-y-registros)
 13. [Jugadores, eventos y acciones](#13-jugadores-eventos-y-acciones)
-14. [Integraciones opcionales: Vault y PlaceholderAPI](#14-integraciones-opcionales-vault-y-placeholderapi)
+14. [Integraciones opcionales: Vault, PlaceholderAPI y WorldGuard](#14-integraciones-opcionales-vault-placeholderapi-y-worldguard)
 15. [Proxy](#15-proxy)
 16. [nexus-storage](#16-nexus-storage)
 17. [nexus-network](#17-nexus-network)
@@ -41,7 +41,7 @@ Se publica en JitPack como build multimódulo:
 ```toml
 # gradle/libs.versions.toml
 [versions]
-nexus = "v2.0.0"
+nexus = "v2.1.0"
 
 [libraries]
 nexus-core = { module = "com.github.7Str1kes.Nexus:nexus-core", version.ref = "nexus" }
@@ -100,6 +100,22 @@ public final class GTeleports extends JavaPlugin {
 - `Nexus.init(plugin)` ya **no** imprime el banner. El plugin lo imprime al terminar un arranque correcto con `LoggerUtils.sendEnable(plugin)`. Tanto `sendEnable` como `sendDisable` solo se imprimen una vez por arranque.
 - `NexusAPI.get().createCommandManager(plugin)` (y las demás factorías) llaman a `Nexus.init(plugin)` si nadie lo hizo.
 
+Los pasos de `StartupService` y `ShutdownService` se protegen con `Steps`: cada paso registra su fallo como `Dueño#paso` con la causa. Al arrancar, el primer paso que falla detiene el arranque; al apagar, los demás siguen.
+
+```java
+private static final Steps STEPS = Steps.of("StartupService");
+
+private boolean loadDatabase() {
+    return STEPS.run("loadDatabase", () -> {
+        plugin.getDatabaseManager().start();
+        return true;
+    });
+}
+
+// ShutdownService
+STEPS.always("closeDatabase", () -> plugin.getDatabaseManager().stop());
+```
+
 ## 3. Consola y diagnóstico
 
 ```java
@@ -148,6 +164,18 @@ Tasks tasks = new Tasks(plugin);
 future.thenAcceptAsync(home -> player.teleport(home), tasks.mainThread());  // inline si ya está en el hilo principal
 tasks.hop(future).thenAccept(...);                                          // completa en el hilo principal
 BukkitTask task = tasks.timerAsync(20, 20 * 60, this::purge);               // todas las variantes devuelven BukkitTask
+```
+
+`PlayerCache<T>` guarda los datos de los jugadores conectados: se cargan al entrar, se mantienen mientras juegan y se sueltan al salir. Una carga que termina cuando el jugador ya se fue se descarta, así que nunca queda nadie en la caché:
+
+```java
+PlayerCache<Profile> profiles = new PlayerCache<>(tasks);
+
+profiles.load(player, repository.load(player.getUniqueId()))      // completa en el hilo principal
+        .thenAccept(kept -> kept.ifPresent(profile -> render(player)));
+profiles.get(uuid);                                               // Optional, vacío mientras carga
+profiles.update(uuid, stats -> stats.withWin(name));               // solo si está cargado
+Profile left = profiles.unload(uuid);                              // al salir, para guardarlo
 ```
 
 `PersistenceQueue` es un escritor único con métricas de salud (fallos consecutivos, escrituras lentas) y ejecución en línea durante el apagado:
@@ -204,6 +232,23 @@ public class CreateSubCommand extends SubCommand<Void> {
 
 El grupo busca por nombre o alias, comprueba el permiso del subcomando (o el del grupo si el subcomando no tiene) y filtra el tab-complete por permiso. El contexto genérico permite pasar, por ejemplo, la economía a la que pertenece un comando de divisa.
 
+Dentro de un `SubCommand`, `filter(opciones, escrito)` deja las opciones que empiezan por lo escrito (sin distinguir mayúsculas) y `join(args, desde)` une los argumentos restantes. Fuera de un subcomando están en `Completions.filter` y `Completions.join`.
+
+La ayuda tiene dos formas en `HelpSubCommand`:
+
+```java
+// Líneas de language.yml; los administradores reciben además las suyas.
+register(HelpSubCommand.lines(messages, "help.player", "help.admin", sender -> sender.hasPermission(Permissions.ADMIN)));
+
+// Una línea por subcomando con permiso, a partir de su uso y su descripción.
+register(HelpSubCommand.<Void>listing("", this::getSubCommands,
+        sender -> messages.send(sender, "help.header"),
+        (sender, sub) -> messages.send(sender, "help.entry", "{usage}", sub.getUsage(), "{description}", sub.getDescription()))
+        .describedAs(() -> messages.raw("help.usage"), () -> messages.raw("help.description")));
+```
+
+`help.send(sender)` la muestra desde `onNoArgs` u `onUnknown`, y `HelpSubCommand.sendLines(...)` envía las líneas sin registrar el subcomando.
+
 `extraCompletions(sender, context)` añade sugerencias al primer argumento, como los alias de los subcomandos o una palabra que no sea un subcomando. Se autocompletan los nombres, no los alias, salvo que se devuelvan aquí.
 
 ## 6. Configuración
@@ -243,6 +288,25 @@ problems.report("config.yml");
 - `validate()` parsea el archivo en disco sin aplicarlo; sirve para que una recarga no cambie nada si hay un error de sintaxis.
 - `KeyStyle` (`KEBAB`, `UPPER_SNAKE`, `ANY`) resuelve claves escritas como `custom-model-data` o `CUSTOM_MODEL_DATA`.
 
+El `ConfigManager` de un plugin extiende `ConfigSet` y registra cada archivo con `track`. `all()` los devuelve en orden y `reload()` los recarga; un plugin que recalcula algo al recargar sobrescribe `reload()` y llama a `super.reload()`.
+
+```java
+public class ConfigManager extends ConfigSet {
+    public ConfigManager(JavaPlugin plugin) {
+        this.mainConfig = track(new ConfigFile(plugin, "config.yml"));
+        this.languageConfig = track(new ConfigFile(plugin, "language.yml"));
+    }
+}
+
+ConfigFiles.checkVersions(configs.all(), CONFIG_VERSION);                 // checkVersion de cada uno
+if (!ConfigFiles.validateAll(configs.all(), (file, error) ->              // antes de recargar nada
+        messages.send(sender, "admin.reload-failed", "{file}", file.getFileName(), "{error}", error))) {
+    return false;
+}
+```
+
+Zonas horarias: `TimeZones.tryParse(raw)` (vacío = la del servidor; `Optional.empty()` si no es una zona) y `TimeZones.parse(raw, aviso)`, que avisa y usa la del servidor.
+
 ## 7. Idioma y placeholders
 
 ```java
@@ -259,6 +323,7 @@ String raw = messages.raw("errors.no-permission");
 ```
 
 - Claves ausentes en el archivo se resuelven contra la copia del jar. Un mensaje vacío no se envía (así un administrador puede silenciarlo).
+- PlaceholderAPI se aplica a la plantilla **antes** de meter los valores. Un texto escrito por un jugador o un administrador que llegue como valor (un nombre, una condición) se muestra tal cual, sin que se resuelvan sus `%placeholders%`.
 - Placeholders por pares, en una sola pasada: un valor escrito por un jugador nunca se vuelve a escanear. `"{player}"` y `"%player%"` coinciden literalmente, y `"player"` (sin delimitadores) coincide con las dos formas.
 
 ```java
@@ -302,6 +367,8 @@ public class HomesMenu extends PaginatedMenu<Home> {
 }
 ```
 
+`MenuSupport` reúne lo que repetían los menús de los plugins: `config(file)` (un `MenuConfig` con `KeyStyle.ANY` y MiniMessage), `title(config, respaldo, pares...)`, `slots`/`contentSlots` (los huecos de un ítem o del contenido, dentro del tamaño), `icon(item, config, ruta, pares...)` (un ítem del juego con el nombre y la lore del archivo), `pairs(mapa)`/`append(pares, más...)` y `prompt(...)`, que pide un texto por chat con el mensaje de `key` y avisa con `cancelledKey` si se cancela.
+
 Claves de un ítem: `material, amount, name, lore, custom-model-data, glow, unbreakable, item-flags, skull-owner, item-model, slot, slots` (`slots` admite enteros y rangos `"10-16"`). `putGated` sigue la clave `denied-behavior` (`HIDE`, `DISABLE`, `SHOW_DENIED` con `<path>.denied`). `flags` equivale a `item-flags`; ambas aceptan guiones y el valor `ALL`. Los materiales aceptan guiones (`gray-stained-glass-pane`).
 
 ## 9. Entrada por chat
@@ -340,6 +407,8 @@ if (!decoded.intact()) {
 }
 ```
 
+`ItemText.encode(item)` / `decode(texto)` guardan un solo ítem en una columna de texto (`v2z:`), y `decode` devuelve `null` si no se puede leer.
+
 Lee `v2:`/`v2z:`, el stream de objetos Bukkit en Base64 (Nexus 1.x, GL-AuctionHouse), bytes crudos (`decodeBytes`, GL-Sync) y el YAML antiguo de GL-InventoryRollback. Un payload vacío es un inventario vacío intacto; uno ilegible tiene `intact() == false`.
 
 ## 11. Duraciones
@@ -373,6 +442,22 @@ Registries.sound("ENTITY_PLAYER_LEVELUP"); Registries.particle("flame"); Registr
 Registries.enchantment("sharpness"); Registries.material("minecraft:stone"); Registries.attribute("generic.max_health");
 ```
 
+Colores y fuegos artificiales:
+
+```java
+Colors.parse("#33ccff"); Colors.parse("aqua");  // Optional<Color>: #rrggbb o un nombre de MiniMessage
+Colors.parse("fuchsia", Colors.BUKKIT);          // con los nombres de org.bukkit.Color
+Colors.parse(raw, miPaleta);                    // paleta propia: nombre en minúsculas → Color
+Colors.format(color);                           // "#33CCFF"
+
+FireworkSpec defaults = new FireworkSpec(FireworkEffect.Type.BALL_LARGE, List.of(Color.AQUA), List.of(), true, true, 1);
+FireworkSpec spec = FireworkSpec.read(config.getConfigurationSection("firework"), defaults, problems);
+spec.launch(player.getLocation());
+spec.launch(location, rocket -> rocket.setPersistent(false));   // antes de que aparezca
+```
+
+`FireworkSpec.read` lee `type`, `colors`, `fade-colors`, `flicker`, `trail` y `power`, y añade a `problems` lo que no entiende.
+
 Los sonidos se guardan como clave, así que funcionan los sonidos de resource pack con su propio namespace. El tono se limita a 0,5-2 (lo que reproduce el cliente).
 
 ## 13. Jugadores, eventos y acciones
@@ -391,7 +476,33 @@ actions.run(player, config.getStringList("rewards"), "%player%", player.getName(
 
 Formato de las acciones: `[tipo] valor`; una línea sin tipo es un comando de consola. Tipos incluidos: `console`/`command`, `player`, `message`/`msg`, `broadcast`, `actionbar`, `title` (`título|subtítulo`) y `sound`.
 
-## 14. Integraciones opcionales: Vault y PlaceholderAPI
+`ActionRunner` ejecuta listas completas. Además de los tipos anteriores entiende `server <nombre>`, `perm-command <permisos> <comando>`, `wait <ticks>`, `random` y `block-until-done`, y comprobaciones que detienen la lista (con el mensaje tras `|`): `permission`, `chance`, `item`, `take`, `if <a> <operador> <b>`, `limit <veces> <periodo> [nombre]` y `cost <cantidad>`. Las comprobaciones seguidas forman un bloque: se comprueban todas antes de cobrar, quitar ítems o contar usos.
+
+```java
+ActionRunner actions = new ActionRunner(plugin, executors.ordered("files"));   // usos de [limit] en data/limits.yml
+actions.register("voucher", (player, scope, value) -> give(player, value));     // un tipo propio
+actions.setZone(settings.zone());                                                // para day/week/month
+actions.run(player, "npc:" + id, lines, "{npc}", id);                            // CompletableFuture, termina con los [wait]
+actions.close();                                                                 // en el apagado
+```
+
+- `new ActionRunner(plugin, limites)` acepta cualquier `UsageLimits`; `YamlUsageLimits` es el que se usa por defecto.
+- `accepts(linea)` valida una línea al cargarla, y `ActionRunner.blocks(lineas)` dice si lleva `[block-until-done]`.
+- `Condition.parse("%player_level% >= 10")` (operadores `>=`, `<=`, `>`, `<`, `==`, `!=`, y `=` para texto), `Period.parse("day" | "week" | "month" | "once" | "12h")` y `Schedule.parse(lineas, problems)` (`mon-fri 18:00-22:00`, `22:00-02:00`, `sat,sun`, `day`, `night`) son públicas para usarlas fuera de las acciones.
+
+`Cooldowns` lleva las esperas por jugador y clave:
+
+```java
+Cooldowns cooldowns = new Cooldowns();
+if (!cooldowns.tryUse(uuid, "spray", Duration.ofSeconds(30))) { ... }   // empieza una si no había
+long left = cooldowns.remainingMillis(uuid, "spray");
+cooldowns.forget(uuid);                                                   // al salir
+
+Cooldowns throttle = new Cooldowns(Duration.ofSeconds(2));               // todas de la misma duración
+if (throttle.tryUse(uuid, "combat.blocked")) messages.send(player, "combat.blocked");
+```
+
+## 14. Integraciones opcionales: Vault, PlaceholderAPI y WorldGuard
 
 ```java
 VaultEconomy economy = VaultEconomy.get();
@@ -417,6 +528,18 @@ PlaceholderHooks.registerIfPresent(() -> new TeleportsExpansion(plugin));
 ```
 
 `PlaceholderHooks` no toca clases de PlaceholderAPI si no está instalado.
+
+`WorldGuardHook` funciona igual: solo toca clases de WorldGuard si está activo, así que el plugin no necesita WorldGuard para compilar. Los flags se nombran como en los comandos de WorldGuard, también los que registra otro plugin.
+
+```java
+WorldGuardHook.isPresent();
+WorldGuardHook.denied(location, "pvp");                         // true solo si WorldGuard lo deniega ahí
+WorldGuardHook.state(player, location, "my-flag");              // Optional<Boolean>: allow, deny o vacío
+WorldGuardHook.canBuild(player, location, "use");               // como el build de WorldGuard, con bypass
+WorldGuardHook.regionsAt(location); WorldGuardHook.inAny(player, List.of("spawn", "world_nether:arena"));
+```
+
+Sin WorldGuard, `canBuild` devuelve `true`, `denied` e `inAny` devuelven `false` y `state` vacío. Hay que declarar `softdepend: [WorldGuard]`.
 
 ## 15. Proxy
 
@@ -461,6 +584,26 @@ MongoConnector.Handle mongo = MongoConnector.connect(uri, "gl_teleports", Durati
 
 Un pool de H2 abierto con `DB_CLOSE_DELAY=-1` se cierra con `DataSources.closeH2(pool)`: ejecuta `SHUTDOWN` antes de cerrar el pool. Sin eso, la base de datos sigue abierta hasta el gancho de salida de H2, que corre con el classloader del plugin ya cerrado y puede perder los últimos cambios.
 
+`DatabaseSettings` lee el `database.yml` común de los plugins GL (`type`, `table-prefix`, `timeout`, `sqlite`, `h2`, `mysql`/`mariadb`/`postgresql`, `mongo`) y abre el almacén:
+
+```java
+private static final StorageDefaults DEFAULTS = StorageDefaults.of("GL-Bounties", "bounties");
+// = new StorageDefaults("GL-Bounties", "gl_bounties", "bounties", "glbounties_")
+
+DatabaseSettings settings = DatabaseSettings.read(config, DEFAULTS);
+try {
+    if (settings.type() == DatabaseType.MONGO) {
+        repository = new MongoRepository(settings.connectMongo(), settings.tablePrefix());
+    } else {
+        repository = new SqlRepository(settings.openPool(dataFolder), settings.type(), settings.tablePrefix());
+    }
+} catch (SQLException | RuntimeException e) {
+    throw settings.failure(e);          // mensaje con la pista de conexión del motor
+}
+```
+
+`DatabaseSettings.warnIfUnsupported(type, LoggerUtils::logWarn)` es el aviso de `ConfigValidator` para un `type` desconocido.
+
 Solo aporta infraestructura: tablas, columnas y consultas siguen en cada plugin.
 
 ## 17. nexus-network
@@ -504,6 +647,9 @@ supervisor.scheduleRetry(this::tryConnect);   // 30 s → 5 min
 - `Cuboid`, `Sphere`, `Cylinder`, `Ellipsoid`: iterables de bloques, contención de ubicaciones y entidades, caras, expansión y contracción.
 - `CC`: legacy (`&`, `&#rrggbb`), MiniMessage (acepta códigos legacy), entrada de usuario segura (`componentOfUserInput`), `legacy(Component)` y `plain(Component)`.
 - `ItemBuilder`, `LocationUtils`, `TitleUtils`, `BossBarBuilder`, `EffectUtils`, `FormatUtils`.
+- `Position`: una ubicación guardada por nombre de mundo, que existe aunque el mundo no esté cargado. `Position.of(location)`, `read(section)`/`write(section, ruta)`, `toLocation()` (`null` sin mundo), `add`, `withRotation`, `chunkX`/`chunkZ`.
+- `Amounts.parse("1.5k")` (`k`, `m`, `b`; `OptionalDouble`, vacío si no es un número positivo y finito) y `Amounts.parseCount("64")`.
+- `EntityVisibility`: muestra u oculta una entidad a cada jugador solo cuando cambia, para quien la pinta con `showEntity`/`hideEntity` o con paquetes.
 
 ## 19. Desarrollo de Nexus
 
