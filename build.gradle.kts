@@ -6,7 +6,7 @@ allprojects {
     // JitPack serves multi-module builds as com.github.<user>.<repo>:<module>; keeping the same group
     // here lets plugins substitute this build with --include-build during development.
     group = "com.github.7Str1kes.Nexus"
-    version = "2.2.0"
+    version = "2.3.0"
 }
 
 subprojects {

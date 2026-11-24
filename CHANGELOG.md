@@ -2,6 +2,14 @@
 
 Todas las versiones siguen [Semantic Versioning](https://semver.org/lang/es/). Las etiquetas de git llevan prefijo `v` (`v2.0.0`), que es la versión que se pide a JitPack.
 
+## [2.3.0] — 2026-11-24
+
+Versión menor: todo es nuevo o compatible.
+
+### Añadido
+
+- **`CenteredText`** (`utils`): centra líneas en el chat poniendo espacios delante, con el ancho en píxeles de cada carácter de la fuente por defecto. Acepta códigos `&` y MiniMessage mezclados, no mide las etiquetas ni lo que llevan dentro, y cuenta la negrita un píxel más ancha. Mide igual que el `centerMessage` de ExyliaCommons. También `width` para medir una línea.
+
 ## [2.2.0] — 2026-11-24
 
 Versión menor: todo es nuevo o compatible.

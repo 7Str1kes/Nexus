@@ -2,7 +2,7 @@
 
 Nexus es la librería común de los plugins `GL-*` para Paper. No es un plugin: cada plugin la empaqueta (shade) dentro de su jar y usa su propia copia. Como Paper resuelve primero las clases del jar de cada plugin, el estado estático de Nexus (prefijo de consola, mensajes de comandos...) es independiente en cada plugin.
 
-Versión actual: **2.2.0**. Cambios por versión en `CHANGELOG.md`.
+Versión actual: **2.3.0**. Cambios por versión en `CHANGELOG.md`.
 
 ## Índice
 
@@ -41,7 +41,7 @@ Se publica en JitPack como build multimódulo:
 ```toml
 # gradle/libs.versions.toml
 [versions]
-nexus = "v2.2.0"
+nexus = "v2.3.0"
 
 [libraries]
 nexus-core = { module = "com.github.7Str1kes.Nexus:nexus-core", version.ref = "nexus" }
@@ -331,6 +331,24 @@ Placeholders.apply("Hola {player}", "{player}", name);
 Placeholders.apply("Página %page%", Map.of("page", "2"));
 Placeholders.applyWithPapi(player, text, "{x}", 1);
 ```
+
+### Centrar líneas en el chat
+
+`CenteredText` pone delante de una línea los espacios que la centran en el chat, midiendo cada carácter en píxeles de la fuente por defecto de Minecraft.
+
+```java
+String line = Placeholders.applyWithPapi(player, raw);   // primero los placeholders: se mide lo que se verá
+player.sendMessage(CC.miniMessage(CenteredText.center(line)));
+
+List<String> lines = CenteredText.center(rawLines);       // cada línea por separado
+int pixels = CenteredText.width("&lHola");                 // ancho sin etiquetas
+```
+
+- Acepta las dos formas de escribir, mezcladas: códigos `&` (con `&#rrggbb`) y etiquetas MiniMessage. Las etiquetas no ocupan, ni lo que llevan dentro (el texto de un `hover`, la URL de un `click`).
+- La negrita (`<bold>`, `<b>` o `&l`, hasta `</bold>`, `</b>`, `<reset>`, `<r>` o `&r`) suma un píxel por carácter. Cambiar de color no la quita, igual que en MiniMessage.
+- Cada carácter lleva un píxel de separación; los que no están en la tabla (versalitas como `ᴀ`, símbolos como `▪`) cuentan 4. El centro es `CenteredText.CHAT_CENTER` (154 píxeles, la mitad del chat con los ajustes por defecto).
+- Mide igual que el `centerMessage` de ExyliaCommons, así que las líneas que se centraban con él se ven igual.
+- Una línea más ancha que medio chat se devuelve sin cambios.
 
 ## 8. Menús
 
