@@ -2,6 +2,23 @@
 
 Todas las versiones siguen [Semantic Versioning](https://semver.org/lang/es/). Las etiquetas de git llevan prefijo `v` (`v2.0.0`), que es la versión que se pide a JitPack.
 
+## [2.2.0] — 2026-11-24
+
+Versión menor: todo es nuevo o compatible.
+
+### Añadido
+
+- **`DepositMenu`** (`modules.menu.extra`): base de los menús en los que el jugador mete ítems, como reponer una tienda o entregar un pedido. Cada menú solo dice qué acepta (`accepts`), qué botones tiene (`buttons`) y qué hace con lo depositado (`deposit`). La base se encarga de:
+  - leer los huecos de depósito y no vaciarlos nunca al redibujar; los botones no pueden caer en ellos;
+  - aceptar solo lo que admite `accepts`, también con teclas numéricas, arrastres y shift-clic desde el inventario, que además solo llena huecos de depósito; los bundles y la clonación de creativo se rechazan;
+  - redibujarse en el tick siguiente a cada cambio;
+  - al cerrar o con `finish`, sacar del menú, una sola vez, todo lo que no sea un botón, aunque no esté en un hueco de depósito, antes de entregarlo; devolver lo que no se use; y devolverlo todo si el jugador se está desconectando.
+- **`Menu.onPlayerInventoryClick`**: los clics en el inventario del jugador mientras el menú está abierto, que `MenuListener` antes ignoraba.
+
+### Cambiado
+
+- **`InventoryUtils.giveOrDrop`** tira lo que no cabe en pilas del tamaño del ítem; antes podía soltar una sola pila de más de 64.
+
 ## [2.1.0] — 2026-11-21
 
 Versión menor: todo es nuevo o compatible. Recoge el código que los plugins GL tenían duplicado.

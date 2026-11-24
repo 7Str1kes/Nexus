@@ -86,13 +86,19 @@ public final class InventoryUtils {
      * Adds items to the player's inventory and drops what does not fit at their feet.
      *
      * @param player the recipient
-     * @param items  the stacks; {@code null} and air are skipped
+     * @param items  the stacks; {@code null} and air are skipped. One may hold more than a stack:
+     *               what is dropped is split into stacks of the item's size.
      * @return what was given and what was dropped
      */
     public static GiveResult giveOrDrop(Player player, ItemStack... items) {
         GiveResult result = give(player, items);
         for (ItemStack leftover : result.leftovers()) {
-            player.getWorld().dropItemNaturally(player.getLocation(), leftover);
+            int max = Math.max(1, leftover.getMaxStackSize());
+            for (int left = leftover.getAmount(); left > 0; left -= max) {
+                ItemStack stack = leftover.clone();
+                stack.setAmount(Math.min(max, left));
+                player.getWorld().dropItemNaturally(player.getLocation(), stack);
+            }
         }
         return result;
     }

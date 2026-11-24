@@ -60,7 +60,10 @@ public final class MenuListener implements Listener {
             event.setCancelled(true);
         }
 
-        if (!insideMenu) return;
+        if (!insideMenu) {
+            menu.dispatchPlayerInventoryClick(event);
+            return;
+        }
 
         if (isClickingTooFast(player, menu.getClickCooldownMillis())) {
             event.setCancelled(true);

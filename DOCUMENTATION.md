@@ -2,7 +2,7 @@
 
 Nexus es la librería común de los plugins `GL-*` para Paper. No es un plugin: cada plugin la empaqueta (shade) dentro de su jar y usa su propia copia. Como Paper resuelve primero las clases del jar de cada plugin, el estado estático de Nexus (prefijo de consola, mensajes de comandos...) es independiente en cada plugin.
 
-Versión actual: **2.1.0**. Cambios por versión en `CHANGELOG.md`.
+Versión actual: **2.2.0**. Cambios por versión en `CHANGELOG.md`.
 
 ## Índice
 
@@ -41,7 +41,7 @@ Se publica en JitPack como build multimódulo:
 ```toml
 # gradle/libs.versions.toml
 [versions]
-nexus = "v2.1.0"
+nexus = "v2.2.0"
 
 [libraries]
 nexus-core = { module = "com.github.7Str1kes.Nexus:nexus-core", version.ref = "nexus" }
@@ -369,6 +369,31 @@ public class HomesMenu extends PaginatedMenu<Home> {
 
 `MenuSupport` reúne lo que repetían los menús de los plugins: `config(file)` (un `MenuConfig` con `KeyStyle.ANY` y MiniMessage), `title(config, respaldo, pares...)`, `slots`/`contentSlots` (los huecos de un ítem o del contenido, dentro del tamaño), `icon(item, config, ruta, pares...)` (un ítem del juego con el nombre y la lore del archivo), `pairs(mapa)`/`append(pares, más...)` y `prompt(...)`, que pide un texto por chat con el mensaje de `key` y avisa con `cancelledKey` si se cancela.
 
+Menús en los que el jugador mete ítems (reponer, entregar): `DepositMenu`.
+
+```java
+public class RestockMenu extends DepositMenu {
+    public RestockMenu(...) {
+        super(manager, viewer, MenuSupport.title(config, "Restock"), config.size(54),
+                MenuSupport.contentSlots(config, config.size(54)));          // content-slots del YAML
+    }
+
+    @Override protected boolean accepts(ItemStack item) { return item.isSimilar(shop.getItem()); }
+    @Override protected Map<Integer, Button> buttons() { ... }                // con deposited() para los números
+    @Override protected List<ItemStack> deposit(List<ItemStack> items) {     // lo que devuelve vuelve al jugador
+        int stored = store(items);
+        return rest;
+    }
+}
+```
+
+- Solo entra lo que `accepts` admite: al colocar, con teclas numéricas, arrastrando o con shift-clic desde el inventario, que además solo llena los huecos de depósito. Los bundles y la clonación de creativo se rechazan.
+- Al cerrar, o con `finish(true)` desde un botón, sale del menú todo lo que no sea un botón, una sola vez, y se entrega a `deposit`. `finish(false)` lo devuelve todo. Un jugador que se desconecta lo recupera todo, sin entrega.
+- `addToDeposit(item)` mete ítems por código (un botón de «rellenar»), solo en los huecos de depósito.
+- El menú se redibuja en el tick siguiente a cada cambio.
+
+`Menu.onPlayerInventoryClick(event)` recibe los clics en el inventario del jugador mientras el menú está abierto.
+
 Claves de un ítem: `material, amount, name, lore, custom-model-data, glow, unbreakable, item-flags, skull-owner, item-model, slot, slots` (`slots` admite enteros y rangos `"10-16"`). `putGated` sigue la clave `denied-behavior` (`HIDE`, `DISABLE`, `SHOW_DENIED` con `<path>.denied`). `flags` equivale a `item-flags`; ambas aceptan guiones y el valor `ALL`. Los materiales aceptan guiones (`gray-stained-glass-pane`).
 
 ## 9. Entrada por chat
@@ -391,7 +416,7 @@ Se lee `originalMessage()` (otro plugin de chat puede haber reescrito `message()
 ```java
 InventoryUtils.GiveResult result = InventoryUtils.give(player, reward.clone());   // devuelve lo que no cupo
 result.leftovers().forEach(item -> pending.store(player, item));
-InventoryUtils.giveOrDrop(player, items);                                         // suelta lo que no cupo
+InventoryUtils.giveOrDrop(player, items);                                         // suelta lo que no cupo, en pilas válidas
 ```
 
 `ItemCodec` (sustituye a `ItemSerialization`, que queda deprecado):

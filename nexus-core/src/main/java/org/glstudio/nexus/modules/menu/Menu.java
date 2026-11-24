@@ -174,6 +174,15 @@ public abstract class Menu {
     }
 
     /**
+     * Called for clicks in the viewer's own inventory while this menu is open, after the automatic
+     * cancellation. A menu that takes items uses it to vet shift clicks and double clicks, which can
+     * move items into or out of the menu from there.
+     *
+     * @param event the click outside the menu's slots
+     */
+    protected void onPlayerInventoryClick(InventoryClickEvent event) {
+    }
+    /**
      * Gate for the auto-refresh ticker; override to skip a redraw when nothing changed.
      *
      * @return {@code true} to redraw on this tick
@@ -212,6 +221,19 @@ public abstract class Menu {
             if (button != null) {
                 button.handleClick(event);
             }
+        } catch (Exception ex) {
+            Diagnostics.logFailure("Menu click (" + getClass().getSimpleName() + ")", ex);
+        }
+    }
+
+    /**
+     * Runs {@link #onPlayerInventoryClick(InventoryClickEvent)}. Called by the listener.
+     *
+     * @param event the click outside the menu's slots
+     */
+    public final void dispatchPlayerInventoryClick(InventoryClickEvent event) {
+        try {
+            onPlayerInventoryClick(event);
         } catch (Exception ex) {
             Diagnostics.logFailure("Menu click (" + getClass().getSimpleName() + ")", ex);
         }
